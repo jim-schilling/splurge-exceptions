@@ -1,0 +1,215 @@
+# Changelog
+
+All notable changes to Splurge Exceptions will be documented in this file.
+
+The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
+and this project adheres to [Calendar Versioning](https://calver.org/).
+
+## [2025.0.0] - 2025-10-20
+
+### Initial Release ✨
+
+This is the inaugural release of Splurge Exceptions, a comprehensive Python exception management library.
+
+#### Added
+
+##### Core Exception Classes
+- `SplurgeError` - Base exception class
+- `SplurgeValidationError` - Input validation errors
+- `SplurgeOSError` - Operating system errors
+- `SplurgeConfigurationError` - Configuration issues
+- `SplurgeRuntimeError` - Runtime execution errors
+- `SplurgeAuthenticationError` - Authentication failures
+- `SplurgeAuthorizationError` - Authorization failures
+- `SplurgeNotImplementedError` - Unimplemented features
+- `SplurgeFrameworkError` - Framework-level errors
+
+##### Exception Features
+- Semantic error codes (e.g., "invalid-value", "file-not-found")
+- Context attachment with flexible data
+- Recovery suggestions
+- Severity levels (LOW, MEDIUM, HIGH, CRITICAL)
+- Recoverability flags
+- Full exception chaining support
+
+##### Exception Management Tools
+
+**Exception Wrapping** (`wrap_exception`)
+- Convert any exception to Splurge exceptions
+- Automatic error code resolution
+- Context and suggestion attachment
+- Preserves exception chains
+
+**Context Manager** (`error_context`)
+- Exception mapping and automatic conversion
+- Context attachment to exceptions
+- Callback support (on_success, on_error)
+- Exception suppression capability
+- Support for nested contexts
+
+**Decorator** (`handle_exceptions`)
+- Automatic exception conversion on decorated functions
+- Configurable logging
+- Optional exception re-raising
+- Traceback inclusion control
+- Works with methods, classmethods, staticmethods
+
+**Message Formatter** (`ErrorMessageFormatter`)
+- Multi-line structured error output
+- Optional context and suggestions display
+- Proper formatting with indentation
+- Unicode and special character support
+
+##### Error Code Management
+- Semantic error code system with domain prefix and hyphenated names
+- Custom error codes via explicit parameters
+- User-defined domain support
+- Support for custom exception hierarchies
+
+##### Public API
+- Clean, type-safe API
+- 17 public exports
+- Full type annotations
+- Google-style docstrings
+- Domain organization (`__domains__`)
+
+##### Documentation
+- Comprehensive README.md with quick-start
+- Detailed README-DETAILS.md with features and examples
+- Complete API-REFERENCE.md with all methods
+- Hypothesis property-based testing documentation (HYPOTHESIS_TESTING.md)
+- Inline code documentation and examples
+
+##### Testing
+- 168 example-based unit tests across 8 test suites
+- 27 hypothesis property-based tests with custom strategies
+- 195 total tests with 100% pass rate
+- 100% code coverage (tested components)
+- 2,700+ automatically generated test scenarios via hypothesis
+- Comprehensive test scenarios:
+  - Basic functionality
+  - Edge cases
+  - Integration scenarios
+  - Error conditions
+  - Complex workflows
+  - Property-based invariant testing
+
+##### Code Quality
+- Full type annotations with MyPy strict mode
+- Ruff linting with 0 errors
+- PEP 8 compliance
+- Automatic exception chaining
+- Consistent error handling patterns
+
+##### Project Structure
+- Well-organized package layout
+- Modular architecture:
+  - `core/` - Base exceptions and error codes
+  - `wrappers/` - Exception conversion utilities
+  - `decorators/` - Function decorators
+  - `managers/` - Context managers
+  - `formatting/` - Message formatting
+  - `cli.py` - Command-line interface
+- Comprehensive test suite organization
+- Documentation hierarchy
+
+##### Development Standards
+- MIT License
+- Calendar versioning (YYYY.0.0)
+- Git version control
+- Development ready with editable install
+- Build system: pyproject.toml
+- Python 3.10+ compatibility
+
+#### Features
+
+**Exception Hierarchy**
+- 9 specialized exception types
+- Clear error domain organization
+- Automatic inheritance chain
+- Backward-compatible with standard exceptions
+
+**Error Code Organization**
+- Semantic format: `domain-error-code` (e.g., "database-sql-syntax-error")
+- User-specified codes with domain prefix
+- Support for domain hierarchies
+- No automatic registry lookups
+
+**Integration Patterns**
+- Explicit wrapping via `wrap_exception()`
+- Decorator-based via `@handle_exceptions`
+- Context manager-based via `error_context()`
+
+**Message Formatting**
+- Structured multi-line output
+- Optional context inclusion
+- Optional suggestions inclusion
+- Unicode-safe formatting
+- Proper indentation and formatting
+
+**Type Safety**
+- Full type annotations on public API
+- MyPy strict mode compatible
+- Generic type support
+- Protocol definitions where appropriate
+
+#### Performance
+- Test suite: 195 tests in 2.73 seconds
+- Unit tests: 168 example-based tests in ~1.94 seconds
+- Property tests: 27 hypothesis tests in ~0.79 seconds
+- Zero performance overhead for exception creation
+- Minimal memory footprint
+
+#### Compatibility
+- Python 3.10+
+- No external runtime dependencies
+- Optional development dependencies:
+  - pytest for testing
+  - mypy for type checking
+  - ruff for linting
+
+### Documentation
+
+- Quick-start guide in README.md
+- Comprehensive feature documentation in README-DETAILS.md
+- Complete API reference in docs/api/API-REFERENCE.md
+- Property-based testing guide in tests/unit/HYPOTHESIS_TESTING.md
+- Inline code documentation with examples
+- Type hints as inline documentation
+
+### Testing
+
+- 195 tests (100% pass rate)
+- 100% code coverage (tested components)
+- Composition: 168 example-based + 27 hypothesis property-based tests
+- All edge cases covered
+- Integration scenarios validated
+- Property-based invariants validated with 2,700+ generated scenarios
+- Code quality checks passed:
+  - Ruff: 0 errors
+  - MyPy strict: 0 errors
+
+### Known Limitations
+
+None known in initial release.
+
+### Future Roadmap
+
+Potential features for future releases:
+- Async error handling utilities
+- Error aggregation and batching
+- Custom formatter plugins
+- Web dashboard for error browsing
+- Error telemetry and monitoring
+- Multi-language support for messages
+
+---
+
+## Version Information
+
+- **Release Date**: October 20, 2025
+- **Version**: 2025.0.0
+- **Status**: Stable
+- **License**: MIT
+- **Author**: Jim Schilling
+- **Repository**: https://github.com/jim-schilling/splurge-exceptions
