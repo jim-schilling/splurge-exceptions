@@ -11,7 +11,7 @@ import pytest
 from splurge_exceptions import (
     SplurgeOSError,
     SplurgeRuntimeError,
-    SplurgeValidationError,
+    SplurgeValueError,
 )
 from splurge_exceptions.decorators.error_handler import handle_exceptions
 
@@ -24,13 +24,13 @@ class TestHandleExceptionsBasic:
 
         @handle_exceptions(
             exceptions={
-                ValueError: (SplurgeValidationError, "invalid-value"),
+                ValueError: (SplurgeValueError, "invalid-value"),
             }
         )
         def failing_func() -> None:
             raise ValueError("Invalid input")
 
-        with pytest.raises(SplurgeValidationError) as exc_info:
+        with pytest.raises(SplurgeValueError) as exc_info:
             failing_func()
 
         assert exc_info.value.error_code == "invalid-value"
@@ -41,7 +41,7 @@ class TestHandleExceptionsBasic:
 
         @handle_exceptions(
             exceptions={
-                ValueError: (SplurgeValidationError, "invalid-value"),
+                ValueError: (SplurgeValueError, "invalid-value"),
                 FileNotFoundError: (SplurgeOSError, "file-not-found"),
             }
         )
@@ -52,7 +52,7 @@ class TestHandleExceptionsBasic:
                 raise FileNotFoundError("File not found")
 
         # Test first mapping
-        with pytest.raises(SplurgeValidationError) as exc_info:
+        with pytest.raises(SplurgeValueError) as exc_info:
             failing_func(ValueError)
         assert exc_info.value.error_code == "invalid-value"
 
@@ -66,7 +66,7 @@ class TestHandleExceptionsBasic:
 
         @handle_exceptions(
             exceptions={
-                ValueError: (SplurgeValidationError, "invalid-value"),
+                ValueError: (SplurgeValueError, "invalid-value"),
             }
         )
         def successful_func() -> int:
@@ -80,7 +80,7 @@ class TestHandleExceptionsBasic:
 
         @handle_exceptions(
             exceptions={
-                ValueError: (SplurgeValidationError, "invalid-value"),
+                ValueError: (SplurgeValueError, "invalid-value"),
             }
         )
         def my_function() -> None:
@@ -95,13 +95,13 @@ class TestHandleExceptionsBasic:
 
         @handle_exceptions(
             exceptions={
-                ValueError: (SplurgeValidationError, "validation"),
+                ValueError: (SplurgeValueError, "validation"),
             }
         )
         def failing_func() -> None:
             raise ValueError("Invalid")
 
-        with pytest.raises(SplurgeValidationError) as exc_info:
+        with pytest.raises(SplurgeValueError) as exc_info:
             failing_func()
 
         # Single-component error codes are valid and returned as-is
@@ -112,7 +112,7 @@ class TestHandleExceptionsBasic:
 
         @handle_exceptions(
             exceptions={
-                ValueError: (SplurgeValidationError, None),
+                ValueError: (SplurgeValueError, None),
             }
         )
         def failing_func() -> None:
@@ -131,18 +131,18 @@ class TestHandleExceptionsWithContext:
 
         @handle_exceptions(
             exceptions={
-                ValueError: (SplurgeValidationError, "invalid-value"),
+                ValueError: (SplurgeValueError, "invalid-value"),
             }
         )
         def failing_func() -> None:
             error = ValueError("Invalid")
             raise error
 
-        with pytest.raises(SplurgeValidationError) as exc_info:
+        with pytest.raises(SplurgeValueError) as exc_info:
             failing_func()
 
         # Context should be accessible after wrapping
-        assert isinstance(exc_info.value, SplurgeValidationError)
+        assert isinstance(exc_info.value, SplurgeValueError)
 
 
 class TestHandleExceptionsExceptionChaining:
@@ -153,13 +153,13 @@ class TestHandleExceptionsExceptionChaining:
 
         @handle_exceptions(
             exceptions={
-                ValueError: (SplurgeValidationError, "invalid-value"),
+                ValueError: (SplurgeValueError, "invalid-value"),
             }
         )
         def failing_func() -> None:
             raise ValueError("Original error")
 
-        with pytest.raises(SplurgeValidationError) as exc_info:
+        with pytest.raises(SplurgeValueError) as exc_info:
             failing_func()
 
         # Original exception should be in __cause__
@@ -172,13 +172,13 @@ class TestHandleExceptionsExceptionChaining:
 
         @handle_exceptions(
             exceptions={
-                ValueError: (SplurgeValidationError, "invalid-value"),
+                ValueError: (SplurgeValueError, "invalid-value"),
             }
         )
         def failing_func() -> None:
             raise ValueError("Test error")
 
-        with pytest.raises(SplurgeValidationError):
+        with pytest.raises(SplurgeValueError):
             failing_func()
 
 
@@ -190,13 +190,13 @@ class TestHandleExceptionsReraise:
 
         @handle_exceptions(
             exceptions={
-                ValueError: (SplurgeValidationError, "invalid-value"),
+                ValueError: (SplurgeValueError, "invalid-value"),
             }
         )
         def failing_func() -> None:
             raise ValueError("Error")
 
-        with pytest.raises(SplurgeValidationError):
+        with pytest.raises(SplurgeValueError):
             failing_func()
 
     def test_decorator_with_reraise_false(self) -> None:
@@ -204,7 +204,7 @@ class TestHandleExceptionsReraise:
 
         @handle_exceptions(
             exceptions={
-                ValueError: (SplurgeValidationError, "invalid-value"),
+                ValueError: (SplurgeValueError, "invalid-value"),
             },
             reraise=False,
         )
@@ -221,7 +221,7 @@ class TestHandleExceptionsReraise:
 
             @handle_exceptions(
                 exceptions={
-                    ValueError: (SplurgeValidationError, "invalid-value"),
+                    ValueError: (SplurgeValueError, "invalid-value"),
                 },
                 reraise=False,
                 log_level="error",
@@ -244,14 +244,14 @@ class TestHandleExceptionsLogging:
 
             @handle_exceptions(
                 exceptions={
-                    ValueError: (SplurgeValidationError, "invalid-value"),
+                    ValueError: (SplurgeValueError, "invalid-value"),
                 },
                 log_level="error",
             )
             def failing_func() -> None:
                 raise ValueError("Error")
 
-            with pytest.raises(SplurgeValidationError):
+            with pytest.raises(SplurgeValueError):
                 failing_func()
 
             # Should have logged
@@ -264,7 +264,7 @@ class TestHandleExceptionsLogging:
 
                 @handle_exceptions(
                     exceptions={
-                        ValueError: (SplurgeValidationError, "invalid-value"),
+                        ValueError: (SplurgeValueError, "invalid-value"),
                     },
                     log_level=log_level,
                     reraise=False,
@@ -282,7 +282,7 @@ class TestHandleExceptionsLogging:
 
             @handle_exceptions(
                 exceptions={
-                    ValueError: (SplurgeValidationError, "invalid-value"),
+                    ValueError: (SplurgeValueError, "invalid-value"),
                 },
                 log_level="error",
                 include_traceback=True,
@@ -305,13 +305,13 @@ class TestHandleExceptionsFunctionSignature:
 
         @handle_exceptions(
             exceptions={
-                ValueError: (SplurgeValidationError, "invalid-value"),
+                ValueError: (SplurgeValueError, "invalid-value"),
             }
         )
         def func() -> None:
             raise ValueError("Error")
 
-        with pytest.raises(SplurgeValidationError):
+        with pytest.raises(SplurgeValueError):
             func()
 
     def test_decorator_with_positional_arguments(self) -> None:
@@ -319,7 +319,7 @@ class TestHandleExceptionsFunctionSignature:
 
         @handle_exceptions(
             exceptions={
-                ValueError: (SplurgeValidationError, "invalid-value"),
+                ValueError: (SplurgeValueError, "invalid-value"),
             }
         )
         def func(a: int, b: str) -> str:
@@ -332,7 +332,7 @@ class TestHandleExceptionsFunctionSignature:
         assert result == "test:5"
 
         # Should catch exception
-        with pytest.raises(SplurgeValidationError):
+        with pytest.raises(SplurgeValueError):
             func(0, "test")
 
     def test_decorator_with_keyword_arguments(self) -> None:
@@ -340,7 +340,7 @@ class TestHandleExceptionsFunctionSignature:
 
         @handle_exceptions(
             exceptions={
-                ValueError: (SplurgeValidationError, "invalid-value"),
+                ValueError: (SplurgeValueError, "invalid-value"),
             }
         )
         def func(name: str, age: int = 0) -> str:
@@ -353,7 +353,7 @@ class TestHandleExceptionsFunctionSignature:
         assert result == "Alice:30"
 
         # Should catch exception
-        with pytest.raises(SplurgeValidationError):
+        with pytest.raises(SplurgeValueError):
             func(name="Bob", age=-5)
 
     def test_decorator_with_return_value(self) -> None:
@@ -361,7 +361,7 @@ class TestHandleExceptionsFunctionSignature:
 
         @handle_exceptions(
             exceptions={
-                ValueError: (SplurgeValidationError, "invalid-value"),
+                ValueError: (SplurgeValueError, "invalid-value"),
             }
         )
         def func(value: int) -> int:
@@ -377,7 +377,7 @@ class TestHandleExceptionsFunctionSignature:
 
         @handle_exceptions(
             exceptions={
-                ValueError: (SplurgeValidationError, "invalid-value"),
+                ValueError: (SplurgeValueError, "invalid-value"),
             }
         )
         def gen_func():
@@ -397,7 +397,7 @@ class TestHandleExceptionsUnmappedExceptions:
 
         @handle_exceptions(
             exceptions={
-                ValueError: (SplurgeValidationError, "invalid-value"),
+                ValueError: (SplurgeValueError, "invalid-value"),
             }
         )
         def failing_func() -> None:
@@ -411,7 +411,7 @@ class TestHandleExceptionsUnmappedExceptions:
 
         @handle_exceptions(
             exceptions={
-                ValueError: (SplurgeValidationError, "invalid-value"),
+                ValueError: (SplurgeValueError, "invalid-value"),
             }
         )
         def failing_func(error_type: type) -> None:
@@ -433,7 +433,7 @@ class TestHandleExceptionsNesting:
 
         @handle_exceptions(
             exceptions={
-                ValueError: (SplurgeValidationError, "invalid-value"),
+                ValueError: (SplurgeValueError, "invalid-value"),
             }
         )
         def outer() -> None:
@@ -447,7 +447,7 @@ class TestHandleExceptionsNesting:
 
             inner()
 
-        with pytest.raises(SplurgeValidationError):
+        with pytest.raises(SplurgeValueError):
             outer()
 
     def test_multiple_decorator_layers(self) -> None:
@@ -462,14 +462,14 @@ class TestHandleExceptionsNesting:
         )
         @handle_exceptions(
             exceptions={
-                ValueError: (SplurgeValidationError, "invalid-value"),
+                ValueError: (SplurgeValueError, "invalid-value"),
             }
         )
         def failing_func(error: type) -> None:
             raise error("Error")
 
         # ValueError should be caught by inner decorator
-        with pytest.raises(SplurgeValidationError):
+        with pytest.raises(SplurgeValueError):
             failing_func(ValueError)
 
         # RuntimeError should be caught by outer decorator
@@ -486,7 +486,7 @@ class TestHandleExceptionsIntegration:
 
         @handle_exceptions(
             exceptions={
-                ValueError: (SplurgeValidationError, "invalid-value"),
+                ValueError: (SplurgeValueError, "invalid-value"),
                 FileNotFoundError: (SplurgeOSError, "file-not-found"),
             },
             log_level="error",
@@ -506,7 +506,7 @@ class TestHandleExceptionsIntegration:
         assert call_count == 1
 
         # ValueError case
-        with pytest.raises(SplurgeValidationError):
+        with pytest.raises(SplurgeValueError):
             process_data("")
         assert call_count == 2
 
@@ -521,7 +521,7 @@ class TestHandleExceptionsIntegration:
         class DataProcessor:
             @handle_exceptions(
                 exceptions={
-                    ValueError: (SplurgeValidationError, "invalid-value"),
+                    ValueError: (SplurgeValueError, "invalid-value"),
                 }
             )
             def process(self, value: int) -> int:
@@ -533,7 +533,7 @@ class TestHandleExceptionsIntegration:
         result = processor.process(5)
         assert result == 10
 
-        with pytest.raises(SplurgeValidationError):
+        with pytest.raises(SplurgeValueError):
             processor.process(-1)
 
     def test_decorator_with_staticmethod(self) -> None:
@@ -543,7 +543,7 @@ class TestHandleExceptionsIntegration:
             @staticmethod
             @handle_exceptions(
                 exceptions={
-                    ValueError: (SplurgeValidationError, "invalid-value"),
+                    ValueError: (SplurgeValueError, "invalid-value"),
                 }
             )
             def validate(value: int) -> bool:
@@ -554,7 +554,7 @@ class TestHandleExceptionsIntegration:
         result = Utils.validate(5)
         assert result is True
 
-        with pytest.raises(SplurgeValidationError):
+        with pytest.raises(SplurgeValueError):
             Utils.validate(-1)
 
     def test_decorator_with_classmethod(self) -> None:
@@ -566,7 +566,7 @@ class TestHandleExceptionsIntegration:
             @classmethod
             @handle_exceptions(
                 exceptions={
-                    ValueError: (SplurgeValidationError, "invalid-value"),
+                    ValueError: (SplurgeValueError, "invalid-value"),
                 }
             )
             def set_value(cls, value: int) -> None:
@@ -577,5 +577,5 @@ class TestHandleExceptionsIntegration:
         Config.set_value(5)
         assert Config._value == 5
 
-        with pytest.raises(SplurgeValidationError):
+        with pytest.raises(SplurgeValueError):
             Config.set_value(-1)

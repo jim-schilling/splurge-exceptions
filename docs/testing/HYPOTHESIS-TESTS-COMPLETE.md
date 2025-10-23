@@ -141,8 +141,8 @@ Validates deterministic behavior
 ```python
 @given(error_code=st.sampled_from(codes))
 def test_wrapped_type(error_code):
-    wrapped = wrap_exception(..., SplurgeValidationError, error_code=error_code)
-    assert isinstance(wrapped, SplurgeValidationError)  # Type maintained
+    wrapped = wrap_exception(..., SplurgeValueError, error_code=error_code)
+    assert isinstance(wrapped, SplurgeValueError)  # Type maintained
     assert isinstance(wrapped, SplurgeError)  # Hierarchy preserved
 ```
 Ensures type system integrity

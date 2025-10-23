@@ -8,24 +8,18 @@ Complete reference for Splurge Exceptions command-line interface.
 2. [Installation](#installation)
 3. [Command Reference](#command-reference)
 4. [Examples](#examples)
-5. [Output Formats](#output-formats)
-6. [Programmatic Usage](#programmatic-usage)
+5. [Programmatic Usage](#programmatic-usage)
 
 ## Overview
 
-The Splurge Exceptions CLI provides tools for:
-- Browsing error codes
-- Filtering codes by domain
-- Generating documentation
-- Exploring the error hierarchy
+The Splurge Exceptions CLI provides basic information and version details for the library.
 
 ### Available Commands
 
 | Command | Purpose |
 |---------|---------|
-| `show-code` | Display specific error code details |
-| `list-codes` | List all error codes (with optional filtering) |
-| `generate-docs` | Generate documentation for all codes |
+| `--version` | Display version information |
+| `--help` | Display help information |
 
 ## Installation
 
@@ -42,338 +36,104 @@ python -m splurge_exceptions <command>
 
 ## Command Reference
 
-### show-code
+### --version
 
-Display details for a specific error code.
-
-**Usage:**
-```bash
-python -m splurge_exceptions show-code <error_code>
-```
-
-**Arguments:**
-- `error_code` (string, required) - The error code to display (e.g., "validation.value.001")
-
-**Output:**
-- Error code
-- Description
-- Associated exception type
-- Recovery suggestions
-
-**Examples:**
-
-Show a validation error code:
-```bash
-python -m splurge_exceptions show-code validation.value.001
-```
-
-Output:
-```
-Error Code: validation.value.001
-Description: Invalid value provided
-Exception Type: SplurgeValidationError
-```
-
-Show an OS error code:
-```bash
-python -m splurge_exceptions show-code os.file.001
-```
-
-Output:
-```
-Error Code: os.file.001
-Description: File not found
-Exception Type: SplurgeOSError
-```
-
-### list-codes
-
-List all registered error codes with optional filtering.
+Display version information for the Splurge Exceptions library.
 
 **Usage:**
 ```bash
-python -m splurge_exceptions list-codes [--domain DOMAIN]
+python -m splurge_exceptions --version
 ```
-
-**Arguments:**
-- `--domain` (string, optional) - Filter by domain (e.g., "validation", "auth", "os")
 
 **Output:**
-- Formatted list of error codes
-- Optional domain filtering
-- Error type information
-
-**Examples:**
-
-List all error codes:
-```bash
-python -m splurge_exceptions list-codes
+```
+splurge-exceptions 2025.0.0
 ```
 
-Output:
-```
-Error Codes:
+### --help
 
-Validation Errors:
-  validation.value.001 - Invalid value provided
-  validation.type.001 - Type mismatch
-  validation.range.001 - Value out of range
-  ...
-
-Authentication Errors:
-  auth.user.001 - User not found
-  auth.token.001 - Invalid token
-  ...
-
-OS Errors:
-  os.file.001 - File not found
-  os.permission.001 - Permission denied
-  ...
-```
-
-List codes in specific domain:
-```bash
-python -m splurge_exceptions list-codes --domain auth
-```
-
-Output:
-```
-Error Codes (domain: auth):
-
-Authentication Errors:
-  auth.user.001 - User not found
-  auth.token.001 - Invalid token
-  auth.expired.001 - Token expired
-```
-
-List codes in validation domain:
-```bash
-python -m splurge_exceptions list-codes --domain validation
-```
-
-Output:
-```
-Error Codes (domain: validation):
-
-Validation Errors:
-  validation.value.001 - Invalid value provided
-  validation.type.001 - Type mismatch
-  validation.range.001 - Value out of range
-  validation.format.001 - Invalid format
-  validation.email.001 - Invalid email
-  validation.required.001 - Required field missing
-```
-
-### generate-docs
-
-Generate comprehensive documentation for all error codes.
+Display help information and available options.
 
 **Usage:**
 ```bash
-python -m splurge_exceptions generate-docs [--format FORMAT]
+python -m splurge_exceptions --help
 ```
-
-**Arguments:**
-- `--format` (string, optional) - Output format ("markdown", "json")
-- Default format: "markdown"
 
 **Output:**
-- Complete documentation for all error codes
-- Organized by domain and exception type
-- Descriptions and recovery suggestions
-
-**Examples:**
-
-Generate Markdown documentation:
-```bash
-python -m splurge_exceptions generate-docs --format markdown
 ```
+usage: splurge-exceptions [-h] [--version]
 
-Output:
-```
-# Splurge Exceptions - Error Code Reference
+Splurge Exceptions - Python exception framework
 
-## Validation Errors
-
-### validation.value.001
-- **Message**: Invalid value provided
-- **Exception**: SplurgeValidationError
-- **Severity**: MEDIUM
-- **Recoverable**: Yes
-
-### validation.type.001
-- **Message**: Type mismatch
-- **Exception**: SplurgeValidationError
-- **Severity**: MEDIUM
-- **Recoverable**: Yes
-
-...
-```
-
-Generate JSON documentation:
-```bash
-python -m splurge_exceptions generate-docs --format json
-```
-
-Output:
-```json
-{
-  "version": "2025.0.0",
-  "error_codes": [
-    {
-      "code": "validation.value.001",
-      "message": "Invalid value provided",
-      "exception": "SplurgeValidationError",
-      "domain": "validation",
-      "category": "value",
-      "severity": "MEDIUM",
-      "recoverable": true
-    },
-    ...
-  ]
-}
+options:
+  -h, --help     show this help message and exit
+  --version      show program's version number and exit
 ```
 
 ## Examples
 
-### Example 1: Find All Auth Error Codes
+### Example 1: Check Version
 
-List all authentication error codes:
+Get the current version of the Splurge Exceptions library:
 ```bash
-python -m splurge_exceptions list-codes --domain auth
+python -m splurge_exceptions --version
 ```
 
-Then examine a specific code:
+Output:
+```
+splurge-exceptions 2025.0.0
+```
+
+### Example 2: Get Help
+
+View available CLI options:
 ```bash
-python -m splurge_exceptions show-code auth.token.001
+python -m splurge_exceptions --help
 ```
 
-### Example 2: Generate Documentation
-
-Create an error code reference document:
-```bash
-python -m splurge_exceptions generate-docs --format markdown > ERROR_CODES.md
+Output:
 ```
+usage: splurge-exceptions [-h] [--version]
 
-This creates a complete reference of all error codes for your project documentation.
+Splurge Exceptions - Python exception framework
 
-### Example 3: Export Error Codes to JSON
-
-Export all codes for programmatic use:
-```bash
-python -m splurge_exceptions generate-docs --format json > error_codes.json
+options:
+  -h, --help     show this help message and exit
+  --version      show program's version number and exit
 ```
-
-Then parse in your application:
-```python
-import json
-
-with open("error_codes.json") as f:
-    error_data = json.load(f)
-    
-for code_info in error_data["error_codes"]:
-    print(f"{code_info['code']}: {code_info['message']}")
-```
-
-### Example 4: Search for Specific Error Type
-
-Find all validation errors:
-```bash
-python -m splurge_exceptions list-codes --domain validation
-```
-
-Then show details for a specific error:
-```bash
-python -m splurge_exceptions show-code validation.email.001
-```
-
-### Example 5: Create Error Code Cheat Sheet
-
-Generate documentation and save it:
-```bash
-python -m splurge_exceptions generate-docs --format markdown > docs/ERROR_CODES.md
-```
-
-Include in your project documentation for developers to reference.
-
-## Output Formats
-
-### Markdown Format
-
-Used by `generate-docs --format markdown`:
-- Headers for each domain
-- Organized by exception type
-- Clear formatting for readability
-- Suitable for documentation sites
-
-### JSON Format
-
-Used by `generate-docs --format json`:
-- Structured data format
-- Programmatically parseable
-- Includes all metadata
-- Suitable for automation
-
-### Text Format
-
-Used by `show-code` and `list-codes`:
-- Human-readable output
-- Clear labeling
-- Suitable for terminal viewing
 
 ## Programmatic Usage
 
 ### Using CLI Commands Programmatically
 
 ```python
-from splurge_exceptions.cli import (
-    cmd_show_code,
-    cmd_list_codes,
-    cmd_generate_docs,
-)
+from splurge_exceptions.cli import main
 
-# Show specific code
-info = cmd_show_code("validation.value.001")
-print(info)
+# Get version programmatically
+exit_code = main(["--version"])
 
-# List codes
-codes = cmd_list_codes()
-print(codes)
-
-# List codes in domain
-auth_codes = cmd_list_codes(domain="auth")
-print(auth_codes)
-
-# Generate documentation
-docs = cmd_generate_docs(format_type="markdown")
-with open("ERROR_CODES.md", "w") as f:
-    f.write(docs)
+# Get help programmatically
+exit_code = main(["--help"])
 ```
 
 ### Integrating with Your Application
 
 ```python
-from splurge_exceptions.cli import cmd_list_codes, cmd_show_code
+from splurge_exceptions.cli import main
 
-def display_error_help(error_code: str) -> None:
-    """Display help for specific error code."""
-    info = cmd_show_code(error_code)
-    print(f"Help for {error_code}:")
-    print(info)
+def show_library_info():
+    """Display library version and help information."""
+    print("Splurge Exceptions Library Info:")
+    print("-" * 40)
 
-def list_all_domains() -> None:
-    """List all error codes organized by domain."""
-    codes = cmd_list_codes()
-    print(codes)
+    print("Version:")
+    main(["--version"])
 
-# Usage in error handling
-try:
-    some_operation()
-except SplurgeValidationError as e:
-    if "--help" in sys.argv:
-        display_error_help(e.error_code)
-    else:
-        print(f"Error: {e}")
+    print("\nAvailable Options:")
+    main(["--help"])
+
+# Usage
+show_library_info()
 ```
 
 ## Shell Integration
@@ -387,8 +147,8 @@ Create a shell alias for easier access:
 alias splurge='python -m splurge_exceptions'
 
 # Now you can use:
-splurge list-codes --domain auth
-splurge show-code validation.value.001
+splurge --version
+splurge --help
 ```
 
 ### Python REPL
@@ -396,73 +156,59 @@ splurge show-code validation.value.001
 Quick access in Python interpreter:
 
 ```python
->>> from splurge_exceptions.cli import cmd_list_codes, cmd_show_code
->>> print(cmd_list_codes(domain="validation"))
->>> print(cmd_show_code("validation.value.001"))
-```
+>>> from splurge_exceptions.cli import main
+>>> main(["--version"])
+splurge-exceptions 2025.0.0
+>>> main(["--help"])
+usage: splurge-exceptions [-h] [--version]
 
-## Error Code Browsing Workflow
+Splurge Exceptions - Python exception framework
 
-### 1. Find Error Code
-
-```bash
-# List all codes in a domain
-python -m splurge_exceptions list-codes --domain validation
-```
-
-### 2. Get Details
-
-```bash
-# Show specific code details
-python -m splurge_exceptions show-code validation.value.001
-```
-
-### 3. Generate Reference
-
-```bash
-# Create documentation
-python -m splurge_exceptions generate-docs --format markdown > ERROR_CODES.md
+options:
+  -h, --help     show this help message and exit
+  --version      show program's version number and exit
 ```
 
 ## Tips & Best Practices
 
-### Tip 1: Create a Helper Script
+### Tip 1: Check Version in Build Scripts
 
+Use the CLI to verify library version in automated scripts:
 ```bash
 #!/bin/bash
-# error_lookup.sh
-if [ $# -eq 0 ]; then
-    python -m splurge_exceptions list-codes
-else
-    python -m splurge_exceptions show-code "$1"
-fi
+# verify_splurge_version.sh
+echo "Checking Splurge Exceptions version..."
+python -m splurge_exceptions --version
 ```
 
-Usage:
-```bash
-./error_lookup.sh                          # List all codes
-./error_lookup.sh validation.value.001     # Show specific code
+### Tip 2: Integrate with CI/CD
+
+Add version checking to your CI pipeline:
+```yaml
+# In your CI configuration (e.g., GitHub Actions)
+- name: Check Splurge Exceptions version
+  run: python -m splurge_exceptions --version
 ```
 
-### Tip 2: Generate Documentation on Build
+### Tip 3: Use in Documentation Generation
 
-Add to your build pipeline:
-```bash
-python -m splurge_exceptions generate-docs --format markdown > docs/error_codes.md
-```
-
-### Tip 3: Integrate with IDE
-
-Create IDE shortcuts to quickly look up error codes:
+Include version information in generated documentation:
 ```python
-# In IDE extension or plugin
-error_code = selected_text  # Get selected error code
-result = subprocess.run(
-    ["python", "-m", "splurge_exceptions", "show-code", error_code],
-    capture_output=True,
-    text=True
-)
-show_popup(result.stdout)
+# docs/generate_version_info.py
+import subprocess
+import sys
+
+def get_splurge_version():
+    result = subprocess.run(
+        [sys.executable, "-m", "splurge_exceptions", "--version"],
+        capture_output=True,
+        text=True
+    )
+    return result.stdout.strip()
+
+# Use in documentation generation
+version = get_splurge_version()
+print(f"Splurge Exceptions Version: {version}")
 ```
 
 ## Troubleshooting
@@ -476,27 +222,22 @@ show_popup(result.stdout)
 pip install splurge-exceptions
 ```
 
-### Invalid Error Code
+### Version Not Showing
 
-**Problem**: `show-code` returns no results
+**Problem**: `--version` doesn't display anything
 
-**Solution**: Check error code format (should be `domain.category.code`):
+**Solution**: Check if the package is properly installed:
 ```bash
-# List valid codes first
-python -m splurge_exceptions list-codes
-
-# Then use exact code format
-python -m splurge_exceptions show-code validation.value.001
+pip show splurge-exceptions
 ```
 
-### Domain Filter Not Working
+### Help Not Working
 
-**Problem**: `list-codes --domain auth` returns nothing
+**Problem**: `--help` returns an error
 
-**Solution**: Check domain name:
+**Solution**: Verify Python module path:
 ```bash
-# List all codes to see valid domains
-python -m splurge_exceptions list-codes
+python -c "import splurge_exceptions.cli; print('CLI module found')"
 ```
 
 ## See Also

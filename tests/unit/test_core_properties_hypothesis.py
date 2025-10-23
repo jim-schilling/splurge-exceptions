@@ -8,7 +8,7 @@ import pytest
 from hypothesis import given
 from hypothesis import strategies as st
 
-from splurge_exceptions import SplurgeError, SplurgeValidationError
+from splurge_exceptions import SplurgeError, SplurgeValueError
 
 # ============================================================================
 # Custom Strategies
@@ -53,7 +53,7 @@ class TestSplurgeErrorCoreProperties:
     @given(valid_error_codes())
     def test_valid_error_code_accepted(self, error_code: str) -> None:
         """Property: Valid error codes are always accepted."""
-        error = SplurgeValidationError(error_code=error_code)
+        error = SplurgeValueError(error_code=error_code)
         assert error.error_code == error_code
 
     @given(valid_domains())
@@ -66,15 +66,15 @@ class TestSplurgeErrorCoreProperties:
     @given(valid_error_codes(), st.text(min_size=0, max_size=200))
     def test_error_code_and_message_preserved(self, error_code: str, message: str) -> None:
         """Property: Error code and message are always preserved."""
-        error = SplurgeValidationError(error_code=error_code, message=message)
+        error = SplurgeValueError(error_code=error_code, message=message)
         assert error.error_code == error_code
         assert error._message == message
 
     @given(valid_error_codes())
     def test_full_code_combines_domain_and_code(self, error_code: str) -> None:
         """Property: Full code combines domain and error code with dot."""
-        error = SplurgeValidationError(error_code=error_code)
-        assert error.full_code == f"validation.{error_code}"
+        error = SplurgeValueError(error_code=error_code)
+        assert error.full_code == f"value.{error_code}"
         assert error.full_code.endswith(error_code)
 
     @given(
@@ -90,13 +90,13 @@ class TestSplurgeErrorCoreProperties:
     )
     def test_valid_severity_accepted(self, error_code: str, severity: str) -> None:
         """Property: Valid severity levels are always accepted."""
-        error = SplurgeValidationError(error_code=error_code, severity=severity)
+        error = SplurgeValueError(error_code=error_code, severity=severity)
         assert error.severity == severity
 
     @given(valid_error_codes(), st.booleans())
     def test_recoverable_flag_preserved(self, error_code: str, recoverable: bool) -> None:
         """Property: Recoverable flag is always preserved."""
-        error = SplurgeValidationError(error_code=error_code, recoverable=recoverable)
+        error = SplurgeValueError(error_code=error_code, recoverable=recoverable)
         assert error._recoverable == recoverable
         assert error.recoverable == recoverable
         assert error.is_recoverable() == recoverable
@@ -104,14 +104,14 @@ class TestSplurgeErrorCoreProperties:
     @given(valid_error_codes(), st.dictionaries(st.text(min_size=1, max_size=30), st.text(max_size=100), max_size=10))
     def test_details_preserved(self, error_code: str, details: dict[str, str]) -> None:
         """Property: Details dictionary is always preserved."""
-        error = SplurgeValidationError(error_code=error_code, details=details)
+        error = SplurgeValueError(error_code=error_code, details=details)
         for key, value in details.items():
             assert error.details[key] == value
 
     @given(valid_error_codes())
     def test_context_attachment(self, error_code: str) -> None:
         """Property: Context can always be attached after creation."""
-        error = SplurgeValidationError(error_code=error_code)
+        error = SplurgeValueError(error_code=error_code)
         error.attach_context(key="field", value="value")
         assert error.has_context("field")
         assert error.get_context("field") == "value"
@@ -120,7 +120,7 @@ class TestSplurgeErrorCoreProperties:
     @given(valid_error_codes(), st.lists(st.text(min_size=1, max_size=100), max_size=10))
     def test_suggestions_addition(self, error_code: str, suggestions: list[str]) -> None:
         """Property: Suggestions can always be added after creation."""
-        error = SplurgeValidationError(error_code=error_code)
+        error = SplurgeValueError(error_code=error_code)
         for suggestion in suggestions:
             error.add_suggestion(suggestion)
         for suggestion in suggestions:
@@ -129,28 +129,28 @@ class TestSplurgeErrorCoreProperties:
     @given(valid_error_codes())
     def test_exception_base_types(self, error_code: str) -> None:
         """Property: Splurge errors are always proper Exception instances."""
-        error = SplurgeValidationError(error_code=error_code)
+        error = SplurgeValueError(error_code=error_code)
         assert isinstance(error, Exception)
         assert isinstance(error, SplurgeError)
 
     @given(valid_error_codes(), st.text(min_size=0, max_size=200))
     def test_message_includes_full_code(self, error_code: str, message: str) -> None:
         """Property: Exception message always includes full code."""
-        error = SplurgeValidationError(error_code=error_code, message=message)
+        error = SplurgeValueError(error_code=error_code, message=message)
         error_message = str(error)
         assert error.full_code in error_message
 
     @given(valid_error_codes())
     def test_can_be_raised_and_caught(self, error_code: str) -> None:
         """Property: Exceptions can always be raised and caught."""
-        error = SplurgeValidationError(error_code=error_code)
-        with pytest.raises(SplurgeValidationError):
+        error = SplurgeValueError(error_code=error_code)
+        with pytest.raises(SplurgeValueError):
             raise error
 
     @given(valid_error_codes())
     def test_multiple_context_items_accumulate(self, error_code: str) -> None:
         """Property: Multiple context attachments accumulate."""
-        error = SplurgeValidationError(error_code=error_code)
+        error = SplurgeValueError(error_code=error_code)
         error.attach_context(key="key1", value="value1")
         error.attach_context(key="key2", value="value2")
         error.attach_context(key="key3", value="value3")
@@ -242,7 +242,7 @@ class TestStateManagementProperties:
     @given(valid_error_codes(), st.lists(st.text(min_size=1), max_size=10))
     def test_suggestions_order_preserved(self, error_code: str, suggestions: list[str]) -> None:
         """Property: Suggestions maintain insertion order."""
-        error = SplurgeValidationError(error_code=error_code)
+        error = SplurgeValueError(error_code=error_code)
         for suggestion in suggestions:
             error.add_suggestion(suggestion)
         for i, suggestion in enumerate(suggestions):
@@ -251,7 +251,7 @@ class TestStateManagementProperties:
     @given(valid_error_codes(), st.dictionaries(st.text(min_size=1), st.integers(), min_size=1, max_size=5))
     def test_context_multiple_types(self, error_code: str, context: dict[str, int]) -> None:
         """Property: Context handles different value types."""
-        error = SplurgeValidationError(error_code=error_code)
+        error = SplurgeValueError(error_code=error_code)
         error.attach_context(context_dict=context)
         retrieved = error.get_all_context()
         for key, value in context.items():
@@ -269,9 +269,9 @@ class TestIntegrationProperties:
     @given(valid_error_codes(), st.text(min_size=0, max_size=100))
     def test_raised_and_caught(self, error_code: str, message: str) -> None:
         """Property: Exceptions can be raised and caught correctly."""
-        error = SplurgeValidationError(error_code=error_code, message=message)
+        error = SplurgeValueError(error_code=error_code, message=message)
 
-        with pytest.raises(SplurgeValidationError) as exc_info:
+        with pytest.raises(SplurgeValueError) as exc_info:
             raise error
 
         assert exc_info.value.error_code == error_code
@@ -285,7 +285,7 @@ class TestIntegrationProperties:
         self, error_code: str, context: dict[str, str], suggestions: list[str]
     ) -> None:
         """Property: Exceptions can have both context and suggestions."""
-        error = SplurgeValidationError(error_code=error_code)
+        error = SplurgeValueError(error_code=error_code)
         error.attach_context(context_dict=context)
         for suggestion in suggestions:
             error.add_suggestion(suggestion)
@@ -300,14 +300,14 @@ class TestIntegrationProperties:
     @given(valid_error_codes())
     def test_exception_chaining(self, error_code: str) -> None:
         """Property: Exceptions can be properly chained."""
-        error1 = SplurgeValidationError(error_code="first-error")
-        error2 = SplurgeValidationError(error_code="second-error")
+        error1 = SplurgeValueError(error_code="first-error")
+        error2 = SplurgeValueError(error_code="second-error")
 
         try:
             raise error1
-        except SplurgeValidationError as e:
+        except SplurgeValueError as e:
             try:
                 raise error2 from e
-            except SplurgeValidationError as e2:
+            except SplurgeValueError as e2:
                 assert e2.__cause__ is e
                 assert e.__cause__ is None

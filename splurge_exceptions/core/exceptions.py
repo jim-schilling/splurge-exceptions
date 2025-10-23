@@ -6,30 +6,31 @@ DOMAINS: ["exceptions", "core"]
 from splurge_exceptions.core.base import SplurgeError
 
 __all__ = [
-    "SplurgeValidationError",
+    "SplurgeValueError",
     "SplurgeOSError",
-    "SplurgeConfigurationError",
+    "SplurgeLookupError",
     "SplurgeRuntimeError",
-    "SplurgeAuthenticationError",
-    "SplurgeAuthorizationError",
-    "SplurgeNotImplementedError",
+    "SplurgeTypeError",
+    "SplurgeAttributeError",
+    "SplurgeImportError",
     "SplurgeFrameworkError",
 ]
 
 
-class SplurgeValidationError(SplurgeError):
-    """Exception raised for data validation failures.
+class SplurgeValueError(SplurgeError):
+    """Exception raised for value validation failures.
 
     Used when input data, configuration, or state validation fails.
 
     Example:
-        >>> raise SplurgeValidationError(
+        >>> raise SplurgeValueError(
         ...     error_code="invalid-value",
         ...     message="Invalid value provided"
+        ...     details={"value": "123", "expected": "int"}
         ... )
     """
 
-    _domain = "validation"
+    _domain = "value"
 
 
 class SplurgeOSError(SplurgeError):
@@ -41,25 +42,27 @@ class SplurgeOSError(SplurgeError):
         >>> raise SplurgeOSError(
         ...     error_code="file-not-found",
         ...     message="File not found"
+        ...     details={"operation": "file_read", "path": "/data/data.txt"}
         ... )
     """
 
     _domain = "os"
 
 
-class SplurgeConfigurationError(SplurgeError):
-    """Exception raised for configuration issues.
+class SplurgeLookupError(SplurgeError):
+    """Exception raised for lookup issues.
 
-    Used when configuration parsing, validation, or loading fails.
+    Used when lookup, retrieval, or search fails.
 
     Example:
-        >>> raise SplurgeConfigurationError(
+        >>> raise SplurgeLookupError(
         ...     error_code="invalid-format",
-        ...     message="Invalid configuration format"
+        ...     message="Invalid lookup"
+        ...     details={"query": "SELECT * FROM users WHERE id = 1"}
         ... )
     """
 
-    _domain = "config"
+    _domain = "lookup"
 
 
 class SplurgeRuntimeError(SplurgeError):
@@ -71,55 +74,59 @@ class SplurgeRuntimeError(SplurgeError):
         >>> raise SplurgeRuntimeError(
         ...     error_code="operation-failed",
         ...     message="Operation failed"
+        ...     details={"operation": "file_read", "path": "/data/data.txt"}
         ... )
     """
 
     _domain = "runtime"
 
 
-class SplurgeAuthenticationError(SplurgeError):
-    """Exception raised for authentication failures.
+class SplurgeTypeError(SplurgeError):
+    """Exception raised for type validation failures.
 
-    Used when authentication credentials are invalid or missing.
+    Used when type validation, conversion, or casting fails.
 
     Example:
-        >>> raise SplurgeAuthenticationError(
-        ...     error_code="invalid-credentials",
-        ...     message="Invalid credentials"
+        >>> raise SplurgeTypeError(
+        ...     error_code="invalid-type",
+        ...     message="Invalid type"
+        ...     details={"expected": "int", "received": "str"}
         ... )
     """
 
-    _domain = "authentication"
+    _domain = "type"
 
 
-class SplurgeAuthorizationError(SplurgeError):
-    """Exception raised for authorization failures.
+class SplurgeAttributeError(SplurgeError):
+    """Exception raised for missing object attributes/methods.
 
-    Used when a user lacks required permissions or privileges.
+    Used when accessing attributes or methods that don't exist on an object.
 
     Example:
-        >>> raise SplurgeAuthorizationError(
-        ...     error_code="access-denied",
-        ...     message="Access denied"
+        >>> raise SplurgeAttributeError(
+        ...     error_code="missing-attribute",
+        ...     message="Attribute does not exist"
+        ...     details={"object": "MyClass", "attribute": "missing_method"}
         ... )
     """
 
-    _domain = "authorization"
+    _domain = "attribute"
 
 
-class SplurgeNotImplementedError(SplurgeError):
-    """Exception raised for unimplemented features.
+class SplurgeImportError(SplurgeError):
+    """Exception raised for module import failures.
 
-    Used when a feature or functionality is not yet implemented.
+    Used when module loading, importing, or plugin loading fails.
 
     Example:
-        >>> raise SplurgeNotImplementedError(
-        ...     error_code="feature-not-implemented",
-        ...     message="Feature not yet implemented"
+        >>> raise SplurgeImportError(
+        ...     error_code="module-not-found",
+        ...     message="Module could not be imported"
+        ...     details={"module": "mymodule", "path": "/path/to/module"}
         ... )
     """
 
-    _domain = "runtime"
+    _domain = "import"
 
 
 class SplurgeFrameworkError(SplurgeError):
@@ -136,6 +143,7 @@ class SplurgeFrameworkError(SplurgeError):
         >>> raise SplurgeDsvError(
         ...     error_code="parse-failed",
         ...     message="Failed to parse DSV file"
+        ...     details={"operation": "file_read", "path": "/data/data.txt"}
         ... )
     """
 

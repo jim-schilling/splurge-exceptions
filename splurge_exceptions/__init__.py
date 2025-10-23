@@ -8,14 +8,14 @@ DOMAINS: ["exceptions", "errors"]
 
 from splurge_exceptions.core.base import SplurgeError
 from splurge_exceptions.core.exceptions import (
-    SplurgeAuthenticationError,
-    SplurgeAuthorizationError,
-    SplurgeConfigurationError,
+    SplurgeAttributeError,
     SplurgeFrameworkError,
-    SplurgeNotImplementedError,
+    SplurgeImportError,
+    SplurgeLookupError,
     SplurgeOSError,
     SplurgeRuntimeError,
-    SplurgeValidationError,
+    SplurgeTypeError,
+    SplurgeValueError,
 )
 from splurge_exceptions.decorators.error_handler import handle_exceptions
 from splurge_exceptions.formatting.message import ErrorMessageFormatter
@@ -27,13 +27,13 @@ __domains__ = ["exceptions", "errors", "handlers"]
 
 __all__ = [
     "SplurgeError",
-    "SplurgeValidationError",
+    "SplurgeValueError",
     "SplurgeOSError",
-    "SplurgeConfigurationError",
+    "SplurgeLookupError",
     "SplurgeRuntimeError",
-    "SplurgeAuthenticationError",
-    "SplurgeAuthorizationError",
-    "SplurgeNotImplementedError",
+    "SplurgeTypeError",
+    "SplurgeAttributeError",
+    "SplurgeImportError",
     "SplurgeFrameworkError",
     "wrap_exception",
     "handle_exceptions",

@@ -6,7 +6,7 @@ with context, suggestions, and metadata.
 
 from splurge_exceptions import (
     SplurgeOSError,
-    SplurgeValidationError,
+    SplurgeValueError,
 )
 from splurge_exceptions.formatting.message import ErrorMessageFormatter
 
@@ -16,7 +16,7 @@ class TestErrorMessageFormatterBasic:
 
     def test_format_error_with_code_and_message(self) -> None:
         """Test formatting error with code and message."""
-        error = SplurgeValidationError("invalid-value", "Invalid email address")
+        error = SplurgeValueError("invalid-value", "Invalid email address")
         formatter = ErrorMessageFormatter()
 
         result = formatter.format_error(error)
@@ -26,7 +26,7 @@ class TestErrorMessageFormatterBasic:
 
     def test_format_error_with_only_code(self) -> None:
         """Test formatting error with only code."""
-        error = SplurgeValidationError("invalid-value", "")
+        error = SplurgeValueError("invalid-value", "")
         formatter = ErrorMessageFormatter()
 
         result = formatter.format_error(error)
@@ -35,7 +35,7 @@ class TestErrorMessageFormatterBasic:
 
     def test_format_error_with_only_message(self) -> None:
         """Test formatting error with only message."""
-        error = SplurgeValidationError("generic", message="Something failed")
+        error = SplurgeValueError("generic", message="Something failed")
         formatter = ErrorMessageFormatter()
 
         result = formatter.format_error(error)
@@ -44,7 +44,7 @@ class TestErrorMessageFormatterBasic:
 
     def test_format_error_returns_string(self) -> None:
         """Test that format_error returns string."""
-        error = SplurgeValidationError("invalid-value", "Invalid")
+        error = SplurgeValueError("invalid-value", "Invalid")
         formatter = ErrorMessageFormatter()
 
         result = formatter.format_error(error)
@@ -58,7 +58,7 @@ class TestErrorMessageFormatterWithContext:
 
     def test_format_error_includes_context(self) -> None:
         """Test that context is included in formatted message."""
-        error = SplurgeValidationError("invalid-value", "Invalid email")
+        error = SplurgeValueError("invalid-value", "Invalid email")
         error.attach_context(context_dict={"field": "email", "input": "user@invalid"})
 
         formatter = ErrorMessageFormatter()
@@ -68,7 +68,7 @@ class TestErrorMessageFormatterWithContext:
 
     def test_format_error_excludes_context_when_requested(self) -> None:
         """Test that context can be excluded from formatted message."""
-        error = SplurgeValidationError("invalid-value", "Invalid")
+        error = SplurgeValueError("invalid-value", "Invalid")
         error.attach_context(context_dict={"field": "email"})
 
         formatter = ErrorMessageFormatter()
@@ -113,7 +113,7 @@ class TestErrorMessageFormatterWithSuggestions:
 
     def test_format_error_includes_suggestions(self) -> None:
         """Test that suggestions are included in formatted message."""
-        error = SplurgeValidationError("invalid-value", "Invalid email")
+        error = SplurgeValueError("invalid-value", "Invalid email")
         error.add_suggestion("Check email format")
         error.add_suggestion("Verify domain")
 
@@ -124,7 +124,7 @@ class TestErrorMessageFormatterWithSuggestions:
 
     def test_format_error_excludes_suggestions_when_requested(self) -> None:
         """Test that suggestions can be excluded from formatted message."""
-        error = SplurgeValidationError("invalid-value", "Invalid")
+        error = SplurgeValueError("invalid-value", "Invalid")
         error.add_suggestion("Try again")
         error.add_suggestion("Check format")
 
@@ -170,7 +170,7 @@ class TestErrorMessageFormatterComplex:
 
     def test_format_with_all_components(self) -> None:
         """Test formatting with error code, message, context, and suggestions."""
-        error = SplurgeValidationError("invalid-email", "Invalid email format")
+        error = SplurgeValueError("invalid-email", "Invalid email format")
         error.attach_context(context_dict={"field": "email", "input": "user@invalid"})
         error.add_suggestion("Add domain name (e.g., @example.com)")
         error.add_suggestion("Check format matches RFC 5322")
@@ -184,7 +184,7 @@ class TestErrorMessageFormatterComplex:
 
     def test_format_multiline_message(self) -> None:
         """Test formatting with multiline message."""
-        error = SplurgeValidationError("parse-error", message="Error occurred:\nFirst issue\nSecond issue")
+        error = SplurgeValueError("parse-error", message="Error occurred:\nFirst issue\nSecond issue")
         formatter = ErrorMessageFormatter()
 
         result = formatter.format_error(error)
@@ -209,7 +209,7 @@ class TestErrorMessageFormatterFormatting:
 
     def test_formatter_produces_readable_output(self) -> None:
         """Test that formatter produces readable output."""
-        error = SplurgeValidationError("invalid-value", "Invalid value")
+        error = SplurgeValueError("invalid-value", "Invalid value")
         error.attach_context(context_dict={"field": "age", "value": -5})
         error.add_suggestion("Value must be positive")
 
@@ -249,7 +249,7 @@ class TestErrorMessageFormatterEdgeCases:
 
     def test_formatter_with_unicode_content(self) -> None:
         """Test formatter with unicode characters."""
-        error = SplurgeValidationError("invalid-value", "Error: 日本語 🚀")
+        error = SplurgeValueError("invalid-value", "Error: 日本語 🚀")
         error.attach_context(context_dict={"note": "Unicode: 中文"})
 
         formatter = ErrorMessageFormatter()
@@ -260,7 +260,7 @@ class TestErrorMessageFormatterEdgeCases:
     def test_formatter_with_very_long_message(self) -> None:
         """Test formatter with very long message."""
         long_message = "x" * 1000
-        error = SplurgeValidationError("generic", message=long_message)
+        error = SplurgeValueError("generic", message=long_message)
 
         formatter = ErrorMessageFormatter()
         result = formatter.format_error(error)
@@ -269,7 +269,7 @@ class TestErrorMessageFormatterEdgeCases:
 
     def test_formatter_with_special_characters(self) -> None:
         """Test formatter with special characters."""
-        error = SplurgeValidationError("invalid-value", "Invalid: <>&\"'\\")
+        error = SplurgeValueError("invalid-value", "Invalid: <>&\"'\\")
         formatter = ErrorMessageFormatter()
 
         result = formatter.format_error(error)

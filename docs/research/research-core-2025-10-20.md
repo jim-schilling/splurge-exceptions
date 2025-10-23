@@ -128,7 +128,7 @@ splurge_exceptions/
 BaseException (Python built-in)
 └── Exception
     └── SplurgeError (root of Splurge exception hierarchy)
-        ├── SplurgeValidationError
+        ├── SplurgeValueError
         ├── SplurgeOSError
         ├── SplurgeConfigurationError
         ├── SplurgeRuntimeError
@@ -321,7 +321,7 @@ CustomError: (SplurgeRuntimeError, "runtime.logic.901")
 
 | Exception | Use Case |
 |-----------|----------|
-| `SplurgeValidationError` | Data validation failures |
+| `SplurgeValueError` | Data validation failures |
 | `SplurgeOSError` | OS, system, and I/O failures |
 | `SplurgeConfigurationError` | Configuration issues |
 | `SplurgeRuntimeError` | Runtime operation failures |
@@ -385,8 +385,8 @@ The system will prefer built-in mappings for known stdlib exceptions, ensuring c
    @wrap_exceptions({
        FileNotFoundError: (SplurgeOSError, None),  # Auto-resolve to os.file.001
        PermissionError: (SplurgeOSError, "os"),  # Resolve to os.file.003 via registry
-       TypeError: (SplurgeValidationError, "validation"),  # Resolve to validation.type.001 via registry
-       ValueError: (SplurgeValidationError, "validation.value"),  # Resolve to validation.value.001 via registry
+       TypeError: (SplurgeValueError, "validation"),  # Resolve to validation.type.001 via registry
+       ValueError: (SplurgeValueError, "value.value"),  # Resolve to validation.value.001 via registry
        CustomError: (SplurgeRuntimeError, "runtime.logic.901"),  # Fully specified, custom mapping
    })
    def my_function():
@@ -437,7 +437,7 @@ def error_context(
             exceptions={
                 FileNotFoundError: (SplurgeOSError, "os.file.001"),
                 PermissionError: (SplurgeOSError, "os.file.003"),
-                ValueError: (SplurgeValidationError, "validation.value.001"),
+                ValueError: (SplurgeValueError, "value.value.001"),
             },
             context={"operation": "file_read"},
         ):
@@ -465,7 +465,7 @@ def error_context(
 ```python
 @handle_exceptions(
     exceptions={
-        ValueError: (SplurgeValidationError, "validation.value.001"),
+        ValueError: (SplurgeValueError, "value.value.001"),
         FileNotFoundError: (SplurgeOSError, "os.file.001"),
     },
     log_level="error",
@@ -650,7 +650,7 @@ except FileNotFoundError as e:
 ### 10.2 Using Context Manager
 
 ```python
-from splurge_exceptions import error_context, SplurgeOSError, SplurgeValidationError
+from splurge_exceptions import error_context, SplurgeOSError, SplurgeValueError
 
 # Simple usage with auto-resolved error code
 with error_context(
@@ -665,7 +665,7 @@ with error_context(
     exceptions={
         FileNotFoundError: (SplurgeOSError, None),  # Auto-resolved to os.file.001
         PermissionError: (SplurgeOSError, "os"),  # Resolves via registry to os.file.003
-        ValueError: (SplurgeValidationError, "validation.value"),  # Resolves to validation.value.001
+        ValueError: (SplurgeValueError, "value.value"),  # Resolves to validation.value.001
     },
     context={"operation": "file_read_and_parse"},
 ):
@@ -685,12 +685,12 @@ with error_context(
 ### 10.3 Using Decorator
 
 ```python
-from splurge_exceptions import handle_exceptions, SplurgeOSError, SplurgeValidationError
+from splurge_exceptions import handle_exceptions, SplurgeOSError, SplurgeValueError
 
 @handle_exceptions(
     exceptions={
         FileNotFoundError: (SplurgeOSError, None),  # Auto-resolved
-        ValueError: (SplurgeValidationError, "validation"),  # Partial specification
+        ValueError: (SplurgeValueError, "validation"),  # Partial specification
     },
     log_level="error",
 )

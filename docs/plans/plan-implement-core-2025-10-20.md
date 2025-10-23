@@ -213,11 +213,11 @@ This document provides a comprehensive, step-by-step implementation plan for the
        FileExistsError: "os.file.002",
        IsADirectoryError: "os.file.004",
        NotADirectoryError: "os.file.005",
-       TypeError: "validation.type.001",
-       ValueError: "validation.value.001",
-       KeyError: "validation.key.001",
-       IndexError: "validation.index.001",
-       AttributeError: "validation.attribute.001",
+       TypeError: "value.type.001",
+       ValueError: "value.value.001",
+       KeyError: "value.key.001",
+       IndexError: "value.index.001",
+       AttributeError: "value.attribute.001",
    }
    
    CORE_ERROR_CODES = {
@@ -227,12 +227,12 @@ This document provides a comprehensive, step-by-step implementation plan for the
        "os.file.003": "Permission denied",
        "os.file.004": "Is a directory",
        "os.file.005": "Not a directory",
-       "validation.generic.000": "Generic validation error (unmapped)",
-       "validation.type.001": "Type validation failed",
-       "validation.value.001": "Value validation failed",
-       "validation.key.001": "Key validation failed",
-       "validation.index.001": "Index out of range",
-       "validation.attribute.001": "Attribute missing or invalid",
+       "value.generic.000": "Generic validation error (unmapped)",
+       "value.type.001": "Type validation failed",
+       "value.value.001": "Value validation failed",
+       "value.key.001": "Key validation failed",
+       "value.index.001": "Index out of range",
+       "value.attribute.001": "Attribute missing or invalid",
        "config.generic.000": "Generic configuration error (unmapped)",
        "runtime.generic.000": "Generic runtime error (unmapped)",
        "authentication.generic.000": "Generic authentication error (unmapped)",
@@ -277,7 +277,7 @@ This document provides a comprehensive, step-by-step implementation plan for the
 
 2. **Implement `splurge_exceptions/core/exceptions.py`**:
    ```python
-   class SplurgeValidationError(SplurgeError):
+   class SplurgeValueError(SplurgeError):
        domain = "validation"
        default_severity = "error"
    
@@ -605,7 +605,7 @@ This document provides a comprehensive, step-by-step implementation plan for the
 
 1. **Review all exports**:
    - [ ] Base exception: `SplurgeError`
-   - [ ] Core exceptions (8 types): `SplurgeValidationError`, `SplurgeOSError`, etc.
+   - [ ] Core exceptions (8 types): `SplurgeValueError`, `SplurgeOSError`, etc.
    - [ ] Error codes: `ErrorCode`, `ErrorCodeRegistry`
    - [ ] Wrapping: `wrap_exception`, `handle_exceptions`
    - [ ] Context: `error_context`
@@ -616,7 +616,7 @@ This document provides a comprehensive, step-by-step implementation plan for the
    __version__ = "2025.0.0"
    __all__ = [
        "SplurgeError",
-       "SplurgeValidationError",
+       "SplurgeValueError",
        "SplurgeOSError",
        "SplurgeConfigurationError",
        "SplurgeRuntimeError",

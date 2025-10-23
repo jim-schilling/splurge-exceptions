@@ -15,22 +15,25 @@ across the Splurge ecosystem. Each exception includes a domain and semantic
 error code that clearly identifies the error condition.
 """
 
+import json
+import re
 from typing import Any
 
 from splurge_exceptions import (
-    SplurgeError,
+    ErrorMessageFormatter,
+    SplurgeFrameworkError,
+    SplurgeOSError,
     error_context,
     handle_exceptions,
     wrap_exception,
 )
-from splurge_exceptions.formatting.message import ErrorMessageFormatter
 
 # ============================================================================
-# Section 1: Custom Exception Types for Splurge-DB Library
+# Custom Domain Exceptions for Database Library
 # ============================================================================
 
 
-class SplurgeDatabaseError(SplurgeError):
+class SplurgeDatabaseError(SplurgeFrameworkError):
     """Base exception for database-related errors.
 
     Used by splurge-db library for all database operation failures.
@@ -41,559 +44,581 @@ class SplurgeDatabaseError(SplurgeError):
     _domain = "database"
 
 
-class SplurgeSqlParseError(SplurgeDatabaseError):
-    """Exception for SQL parsing failures.
+class SplurgeSqlError(SplurgeDatabaseError):
+    """Exception for SQL-related errors.
 
     Raised when SQL query parsing, validation, or syntax analysis fails.
-
-    Example:
-        >>> raise SplurgeSqlParseError(
-        ...     error_code="sql-parse-error",
-        ...     message="Invalid SQL syntax in WHERE clause"
-        ... )
     """
 
-    _domain = "database"
+    _domain = "database.sql"
 
 
-class SplurgeQueryExecutionError(SplurgeDatabaseError):
-    """Exception for query execution failures.
+class SplurgeQueryError(SplurgeSqlError):
+    """Exception for query execution errors.
 
-    Raised when SQL query execution fails, including database-level errors.
-
-    Example:
-        >>> raise SplurgeQueryExecutionError(
-        ...     error_code="query-timeout",
-        ...     message="Query timeout after 30 seconds"
-        ... )
+    Raised when query execution fails due to database constraints,
+    timeouts, or runtime conditions.
     """
 
-    _domain = "database"
+    _domain = "database.sql.query"
 
 
-class SplurgeSchemaError(SplurgeDatabaseError):
-    """Exception for database schema-related errors.
+class SplurgeConnectionError(SplurgeDatabaseError):
+    """Exception for database connection errors.
 
-    Raised when schema validation, migration, or structure errors occur.
+    Raised when database connection establishment, authentication,
+    or configuration fails.
     """
 
-    _domain = "database"
+    _domain = "database.connection"
+
+
+class SplurgeTransactionError(SplurgeDatabaseError):
+    """Exception for transaction-related errors.
+
+    Raised when transaction management, rollback, or commit operations fail.
+    """
+
+    _domain = "database.transaction"
+
+
+class SplurgeMigrationError(SplurgeDatabaseError):
+    """Exception for database migration errors.
+
+    Raised when database schema migrations, version conflicts,
+    or migration execution fails.
+    """
+
+    _domain = "database.migration"
 
 
 # ============================================================================
-# Section 2: Custom Exception Types for Splurge-Encoding Library
+# Custom Domain Exceptions for Data Processing Library
 # ============================================================================
 
 
-class SplurgeEncodingError(SplurgeError):
-    """Base exception for encoding/decoding errors.
+class SplurgeDataError(SplurgeFrameworkError):
+    """Base exception for data processing errors.
 
-    Used by splurge-encoding library for all character encoding operations.
+    Used by splurge-data library for all data manipulation failures.
     """
 
-    _domain = "encoding"
+    _domain = "data"
 
 
-class SplurgeUnicodeDecodeError(SplurgeEncodingError):
-    """Exception for Unicode decoding failures.
+class SplurgeEncodingError(SplurgeDataError):
+    """Exception for data encoding/decoding errors.
 
-    Raised when decoding bytes to string fails due to encoding issues.
-
-    Example:
-        >>> raise SplurgeUnicodeDecodeError(
-        ...     error_code="unicode-decode-error",
-        ...     message="Invalid UTF-8 sequence at position 42"
-        ... )
+    Raised when data encoding, decoding, or format conversion fails.
     """
 
-    _domain = "encoding"
+    _domain = "data.encoding"
 
 
-class SplurgeUnicodeEncodeError(SplurgeEncodingError):
-    """Exception for Unicode encoding failures.
+class SplurgeValidationError(SplurgeDataError):
+    """Exception for data validation errors.
 
-    Raised when encoding string to bytes fails due to encoding constraints.
+    Raised when data validation rules, constraints, or format checks fail.
     """
 
-    _domain = "encoding"
+    _domain = "data.validation"
+
+
+class SplurgeFormatError(SplurgeDataError):
+    """Exception for data format parsing errors.
+
+    Raised when parsing structured data formats (JSON, CSV, XML) fails.
+    """
+
+    _domain = "data.format"
 
 
 # ============================================================================
-# Section 3: Custom Exception Types for Splurge-Data Library
+# Database Client Library Implementation
 # ============================================================================
 
 
-class SplurgeDataFormatError(SplurgeError):
-    """Base exception for data format errors.
+class DatabaseClient:
+    """A database client library that uses splurge-exceptions for comprehensive error handling."""
 
-    Used by splurge-data library for all data format parsing and validation.
-    """
+    def __init__(self, connection_string: str):
+        """Initialize database client.
 
-    _domain = "data_format"
+        Args:
+            connection_string: Database connection string
+        """
+        self.connection_string = connection_string
+        self.connection = None
+        self.formatter = ErrorMessageFormatter()
 
-
-class SplurgeDsvFormatError(SplurgeDataFormatError):
-    """Exception for DSV (Delimited Separated Values) format errors.
-
-    Raised when parsing or validating DSV files fails.
-
-    Example:
-        >>> raise SplurgeDsvFormatError(
-        ...     error_code="dsv-format-error",
-        ...     message="Inconsistent field count in row 5"
-        ... )
-    """
-
-    _domain = "data_format"
-
-
-class SplurgeSchemaParseError(SplurgeDataFormatError):
-    """Exception for data schema parsing failures.
-
-    Raised when schema definition parsing or validation fails.
-    """
-
-    _domain = "data_format"
-
-
-# ============================================================================
-# Section 4: Database Operations with Custom Exceptions
-# ============================================================================
-
-
-@handle_exceptions(
-    exceptions={
-        SyntaxError: (SplurgeSqlParseError, "sql-syntax-error"),
-        ValueError: (SplurgeSqlParseError, "invalid-sql"),
-    },
-    log_level="error",
-)
-def parse_sql_query(sql: str) -> dict[str, Any]:
-    """Parse SQL query with validation.
-
-    Args:
-        sql: SQL query string to parse
-
-    Returns:
-        Parsed query structure
-
-    Raises:
-        SplurgeSqlParseError: If SQL parsing fails
-    """
-    if not sql.strip():
-        raise ValueError("SQL query cannot be empty")
-
-    if "DROP" in sql.upper() and "PRODUCTION" in sql.upper():
-        raise SyntaxError("Dangerous operation not allowed")
-
-    # Simulate parsing
-    return {
-        "type": "SELECT",
-        "tables": ["users"],
-        "fields": ["*"],
-        "raw": sql,
-    }
-
-
-def execute_database_query(query: str, timeout_seconds: float = 30.0) -> list[dict[str, Any]]:
-    """Execute database query with timeout handling.
-
-    Args:
-        query: SQL query to execute
-        timeout_seconds: Query timeout in seconds
-
-    Returns:
-        Query results
-
-    Raises:
-        SplurgeQueryExecutionError: If query execution fails
-    """
-    context_data = {
-        "query": query[:50] + "..." if len(query) > 50 else query,
-        "timeout_seconds": timeout_seconds,
-    }
-
-    def on_error(exc: Exception) -> None:
-        """Handle query execution errors."""
-        print(f"Query execution error: {exc}")
-
-    with error_context(
+    @handle_exceptions(
         exceptions={
-            TimeoutError: (SplurgeQueryExecutionError, "query-timeout"),
-            RuntimeError: (SplurgeQueryExecutionError, "query-error"),
+            ConnectionError: (SplurgeConnectionError, "connection-refused"),
+            TimeoutError: (SplurgeConnectionError, "connection-timeout"),
+            ValueError: (SplurgeSqlError, "invalid-connection-string"),
         },
-        context=context_data,
-        on_error=on_error,
-        suppress=False,
-    ):
-        # Simulate query execution
-        if "timeout" in query.lower():
-            raise TimeoutError(f"Query exceeded {timeout_seconds}s timeout")
+        log_level="warning",
+        reraise=True,
+        include_traceback=False,
+    )
+    def connect(self) -> None:
+        """Establish database connection with comprehensive error handling."""
+        # Simulate connection logic
+        if "invalid" in self.connection_string.lower():
+            raise ValueError("Invalid connection string format")
 
-        if "no_results" in query.lower():
-            raise RuntimeError("Query produced no results")
+        if "timeout" in self.connection_string.lower():
+            raise TimeoutError("Connection timeout")
 
-        # Return mock results
-        return [
-            {"id": 1, "name": "Alice", "email": "alice@example.com"},
-            {"id": 2, "name": "Bob", "email": "bob@example.com"},
+        if "refused" in self.connection_string.lower():
+            raise ConnectionError("Connection refused")
+
+        # Simulate successful connection
+        self.connection = {"status": "connected"}
+        print("Database connected successfully")
+
+    @handle_exceptions(
+        exceptions={
+            ValueError: (SplurgeSqlError, "execution-syntax-error"),
+            RuntimeError: (SplurgeQueryError, "execution-failed"),
+        },
+        log_level="warning",
+        reraise=True,
+        include_traceback=False,  # Don't include stack traces in examples
+    )
+    def execute_query(self, query: str, parameters: list[Any] | None = None) -> list[dict[str, Any]]:
+        """Execute SQL query with error handling and context.
+
+        Args:
+            query: SQL query string
+            parameters: Query parameters
+
+        Returns:
+            Query results
+        """
+        if not self.connection:
+            raise SplurgeConnectionError(error_code="not-connected", message="No active database connection")
+
+        # SQL validation - raise domain-specific exceptions directly
+        if not query.strip():
+            raise SplurgeSqlError(error_code="empty-query", message="Query cannot be empty")
+
+        # Check for dangerous operations
+        dangerous_patterns = [
+            r"\bDROP\s+TABLE\b",
+            r"\bDELETE\s+FROM\s+\w+\s*$",
+            r"\bTRUNCATE\b",
         ]
 
+        for pattern in dangerous_patterns:
+            if re.search(pattern, query, re.IGNORECASE):
+                raise SplurgeSqlError(
+                    error_code="dangerous-operation",
+                    message="Dangerous SQL operation detected",
+                    details={"pattern": pattern, "query": query},
+                )
 
-def validate_database_schema(schema_def: dict[str, Any]) -> bool:
-    """Validate database schema definition.
+        # Simulate query execution
+        if "INVALID" in query.upper():
+            raise ValueError("Invalid SQL syntax")
 
-    Args:
-        schema_def: Schema definition dictionary
+        if "TIMEOUT" in query.upper():
+            raise RuntimeError("Query execution timeout")
 
-    Returns:
-        True if schema is valid
+        # Return mock results
+        return [{"id": 1, "name": "Sample", "value": 42}]
 
-    Raises:
-        SplurgeSchemaError: If schema validation fails
-    """
-    required_keys = ["name", "fields", "primary_key"]
+    def batch_execute(self, queries: list[str]) -> list[list[dict[str, Any]]]:
+        """Execute multiple queries in a transaction.
 
-    try:
-        for key in required_keys:
-            if key not in schema_def:
-                raise KeyError(f"Missing required key: {key}")
+        Args:
+            queries: List of SQL queries
 
-        if not isinstance(schema_def["fields"], dict):
-            raise TypeError("'fields' must be a dictionary")
+        Returns:
+            List of query results
+        """
+        if not self.connection:
+            raise SplurgeConnectionError(error_code="not-connected", message="No active database connection")
 
-        if not schema_def["fields"]:
-            raise ValueError("Schema must have at least one field")
+        results = []
 
-        return True
+        def handle_query_success():
+            print("  + Query executed successfully")
 
-    except (KeyError, TypeError, ValueError) as e:
-        error = wrap_exception(
-            e,
-            SplurgeSchemaError,
-            error_code="schema-validation-error",
-        )
-        error.attach_context(key="schema_name", value=schema_def.get("name", "unknown"))
-        error.add_suggestion("Verify schema definition includes required keys")
-        error.add_suggestion("Check field definitions are properly formatted")
-        raise error from e
+        def handle_query_error(exc):
+            print(f"  - Query failed: {self.formatter.format_error(exc, include_context=True)}")
 
-
-# ============================================================================
-# Section 6: Encoding Operations with Custom Exceptions
-# ============================================================================
-
-
-@handle_exceptions(
-    exceptions={
-        UnicodeDecodeError: (SplurgeUnicodeDecodeError, "unicode-decode-error"),
-        LookupError: (SplurgeUnicodeDecodeError, "encoding-not-supported"),
-    },
-    log_level="error",
-)
-def decode_bytes_to_string(data: bytes, encoding: str = "utf-8") -> str:
-    """Decode bytes to string with error handling.
-
-    Args:
-        data: Bytes to decode
-        encoding: Character encoding to use
-
-    Returns:
-        Decoded string
-
-    Raises:
-        SplurgeUnicodeDecodeError: If decoding fails
-    """
-    try:
-        return data.decode(encoding)
-    except LookupError as e:
-        raise LookupError(f"Unknown encoding: {encoding}") from e
-
-
-def encode_string_to_bytes(data: str, encoding: str = "utf-8") -> bytes:
-    """Encode string to bytes with error handling.
-
-    Args:
-        data: String to encode
-        encoding: Character encoding to use
-
-    Returns:
-        Encoded bytes
-
-    Raises:
-        SplurgeUnicodeEncodeError: If encoding fails
-    """
-    try:
-        return data.encode(encoding)
-    except UnicodeEncodeError as e:
-        error = wrap_exception(
-            e,
-            SplurgeUnicodeEncodeError,
-            error_code="unicode-encode-error",
-        )
-        error.attach_context(key="encoding", value=encoding)
-        error.attach_context(key="problem_position", value=e.start)
-        error.add_suggestion(f"Character cannot be represented in {encoding}")
-        error.add_suggestion("Try using utf-8 encoding instead")
-        raise error from e
-
-
-# ============================================================================
-# Section 7: Data Format Operations with Custom Exceptions
-# ============================================================================
-
-
-def parse_dsv_content(content: str, delimiter: str = ",") -> list[list[str]]:
-    """Parse DSV (Delimited Separated Values) content.
-
-    Args:
-        content: DSV content string
-        delimiter: Field delimiter character
-
-    Returns:
-        List of rows, each row is a list of fields
-
-    Raises:
-        SplurgeDsvFormatError: If parsing fails
-    """
-    lines = content.strip().split("\n")
-    if not lines:
-        raise ValueError("Empty DSV content")
-
-    # Parse first row to determine field count
-    first_row = lines[0].split(delimiter)
-    expected_fields = len(first_row)
-    rows: list[list[str]] = [first_row]
-
-    try:
-        for row_num, line in enumerate(lines[1:], start=2):
-            fields = line.split(delimiter)
-
-            if len(fields) != expected_fields:
-                raise ValueError(f"Row {row_num}: expected {expected_fields} fields, got {len(fields)}")
-
-            rows.append(fields)
-
-        return rows
-
-    except ValueError as e:
-        error = wrap_exception(
-            e,
-            SplurgeDsvFormatError,
-            error_code="dsv-format-error",
-        )
-        error.attach_context(key="delimiter", value=repr(delimiter))
-        error.attach_context(key="expected_fields", value=expected_fields)
-        error.add_suggestion("Verify the delimiter is correct")
-        error.add_suggestion("Check for proper quoting of fields with delimiters")
-        raise error from e
-
-
-def parse_data_schema(schema_definition: str) -> dict[str, Any]:
-    """Parse data schema from definition string.
-
-    Args:
-        schema_definition: Schema definition string (JSON format)
-
-    Returns:
-        Parsed schema dictionary
-
-    Raises:
-        SplurgeSchemaParseError: If schema parsing fails
-    """
-    import json
-
-    try:
-        schema = json.loads(schema_definition)
-
-        # Validate schema structure
-        if "fields" not in schema:
-            raise KeyError("Schema missing 'fields' definition")
-
-        # Validate field definitions
-        for field_name, field_def in schema["fields"].items():
-            if "type" not in field_def:
-                raise ValueError(f"Field '{field_name}' missing 'type' definition")
-
-        return schema  # type: ignore[no-any-return]
-
-    except (json.JSONDecodeError, KeyError, ValueError) as e:
-        error = wrap_exception(
-            e,
-            SplurgeSchemaParseError,
-            error_code="schema-parse-error",
-        )
-        error.add_suggestion("Ensure schema is valid JSON")
-        error.add_suggestion("Check all fields have required properties")
-        raise error from e
-
-
-# ============================================================================
-# Section 8: Integrated Workflow Example
-# ============================================================================
-
-
-def process_data_pipeline(
-    raw_data: bytes,
-    schema_json: str,
-    database_query: str,
-) -> dict[str, Any]:
-    """Process a complete data pipeline with multiple operations.
-
-    This demonstrates using custom Splurge exceptions across database,
-    encoding, and data format operations.
-
-    Args:
-        raw_data: Raw bytes data to process
-        schema_json: Schema definition as JSON string
-        database_query: Database query to validate
-
-    Returns:
-        Processing results
-
-    Raises:
-        Various SplurgeError subclasses for different operations
-    """
-    formatter = ErrorMessageFormatter()
-    results = {}
-
-    try:
-        # Step 1: Decode incoming data
-        print("Step 1: Decoding data...")
-        decoded_data = decode_bytes_to_string(raw_data, encoding="utf-8")
-        results["decoded_rows"] = len(decoded_data.split("\n"))
-        print(f"[OK] Decoded {results['decoded_rows']} lines of data")
-
-        # Step 2: Parse DSV format
-        print("Step 2: Parsing DSV format...")
-        rows = parse_dsv_content(decoded_data, delimiter=",")
-        results["parsed_rows"] = len(rows)
-        print(f"[OK] Parsed {results['parsed_rows']} rows")
-
-        # Step 3: Validate schema
-        print("Step 3: Validating schema...")
-        schema = parse_data_schema(schema_json)
-        results["schema_fields"] = len(schema["fields"])
-        print(f"[OK] Schema validated with {results['schema_fields']} fields")
-
-        # Step 4: Validate SQL query
-        print("Step 4: Validating SQL query...")
-        parsed_query = parse_sql_query(database_query)
-        results["query_type"] = parsed_query["type"]
-        print("[OK] SQL query validated")
-
-        # Step 5: Execute query
-        print("Step 5: Executing query...")
-        query_results = execute_database_query(database_query)
-        results["query_results"] = len(query_results)
-        print(f"[OK] Query returned {results['query_results']} rows")
-
-        # Step 6: Validate database schema
-        print("Step 6: Validating database schema...")
-        schema_def = {
-            "name": "users",
-            "fields": {field_name: {"type": "string"} for field_name in schema.get("fields", {})},
-            "primary_key": "id",
-        }
-        is_valid = validate_database_schema(schema_def)
-        results["schema_valid"] = is_valid
-        print("[OK] Database schema is valid")
+        for i, query in enumerate(queries):
+            with error_context(
+                exceptions={
+                    ValueError: (SplurgeSqlError, "invalid-syntax"),
+                    RuntimeError: (SplurgeQueryError, "execution-failed"),
+                },
+                context={"batch_index": i, "query": query[:50]},
+                on_success=handle_query_success,
+                on_error=handle_query_error,
+                suppress=False,
+            ):
+                result = self.execute_query(query)
+                results.append(result)
 
         return results
 
-    except SplurgeError as e:
-        print("\n" + "=" * 70)
-        print("PIPELINE ERROR OCCURRED!")
-        print("=" * 70)
-        formatted = formatter.format_error(e)
+    def disconnect(self) -> None:
+        """Disconnect from database."""
+        if self.connection:
+            self.connection = None
+            print("Database disconnected")
+
+
+# ============================================================================
+# Data Processing Library Implementation
+# ============================================================================
+
+
+class DataProcessor:
+    """A data processing library that uses splurge-exceptions for comprehensive error handling."""
+
+    def __init__(self, encoding: str = "utf-8"):
+        """Initialize data processor.
+
+        Args:
+            encoding: Default text encoding
+        """
+        self.encoding = encoding
+        self.formatter = ErrorMessageFormatter()
+
+    def validate_json_schema(self, data: dict[str, Any], schema: dict[str, Any]) -> bool:
+        """Validate JSON data against a schema.
+
+        Args:
+            data: JSON data to validate
+            schema: Validation schema
+
+        Returns:
+            True if valid, raises exception if invalid
+        """
+        # Check required fields
+        required_fields = schema.get("required", [])
+        for field in required_fields:
+            if field not in data:
+                raise SplurgeValidationError(
+                    error_code="missing-required-field",
+                    message=f"Required field '{field}' is missing",
+                    details={"field": field, "schema": schema},
+                )
+
+        # Check field types
+        properties = schema.get("properties", {})
+        for field, value in data.items():
+            if field in properties:
+                expected_type = properties[field].get("type")
+                if expected_type and not isinstance(value, self._get_type_class(expected_type)):
+                    raise SplurgeValidationError(
+                        error_code="type-mismatch",
+                        message=f"Field '{field}' should be of type '{expected_type}'",
+                        details={"field": field, "expected": expected_type, "actual": type(value).__name__},
+                    )
+
+        return True
+
+    def _get_type_class(self, type_name: str):
+        """Get Python type class from type name."""
+        type_map = {
+            "string": str,
+            "integer": int,
+            "number": (int, float),
+            "boolean": bool,
+            "array": list,
+            "object": dict,
+        }
+        return type_map.get(type_name, object)
+
+    @handle_exceptions(
+        exceptions={
+            json.JSONDecodeError: (SplurgeFormatError, "json-parse-error"),
+            UnicodeDecodeError: (SplurgeEncodingError, "encoding-error"),
+            ValueError: (SplurgeValidationError, "validation-error"),
+        },
+        log_level="warning",
+    )
+    def load_json_file(self, file_path: str) -> dict[str, Any]:
+        """Load and validate JSON file.
+
+        Args:
+            file_path: Path to JSON file
+
+        Returns:
+            Parsed JSON data
+        """
+        try:
+            with open(file_path, encoding=self.encoding) as f:
+                content = f.read()
+
+                # Parse JSON
+                data = json.loads(content)
+
+                # Validate structure
+                if not isinstance(data, dict):
+                    raise SplurgeValidationError(
+                        error_code="invalid-json-structure",
+                        message="JSON root must be an object",
+                        details={"actual_type": type(data).__name__},
+                    )
+
+                return data
+
+        except FileNotFoundError as e:
+            raise wrap_exception(
+                e, SplurgeOSError, error_code="file-not-found", context={"file_path": file_path}
+            ) from e
+
+    def process_csv_data(self, csv_content: str, delimiter: str = ",") -> list[dict[str, Any]]:
+        """Process CSV data with comprehensive error handling.
+
+        Args:
+            csv_content: CSV content as string
+            delimiter: CSV field delimiter
+
+        Returns:
+            Processed data as list of dictionaries
+        """
+        lines = csv_content.strip().split("\n")
+        if not lines:
+            raise SplurgeFormatError(error_code="empty-csv", message="CSV content cannot be empty")
+
+        # Parse header
+        try:
+            header = [field.strip() for field in lines[0].split(delimiter)]
+        except Exception as e:
+            raise wrap_exception(
+                e, SplurgeFormatError, error_code="invalid-csv-header", context={"delimiter": delimiter}
+            ) from e
+
+        results = []
+
+        def handle_row_error(exc):
+            print(f"  ✗ Row parsing failed: {self.formatter.format_error(exc)}")
+
+        for i, line in enumerate(lines[1:], 1):
+            if not line.strip():
+                continue  # Skip empty lines
+
+            with error_context(
+                exceptions={
+                    ValueError: (SplurgeFormatError, "invalid-csv-row"),
+                    IndexError: (SplurgeFormatError, "csv-field-mismatch"),
+                },
+                context={"row_number": i, "line": line[:50]},
+                on_error=handle_row_error,
+                suppress=True,  # Continue processing other rows
+            ):
+                try:
+                    values = [field.strip() for field in line.split(delimiter)]
+
+                    if len(values) != len(header):
+                        raise SplurgeFormatError(
+                            error_code="field-count-mismatch",
+                            message=f"Row has {len(values)} fields, expected {len(header)}",
+                            details={"row": i, "expected": len(header), "actual": len(values)},
+                        )
+
+                    row_data = dict(zip(header, values, strict=False))
+                    results.append(row_data)
+
+                except Exception:
+                    # This row will be skipped due to suppress=True
+                    pass
+
+        return results
+
+
+# ============================================================================
+# Library Integration Examples
+# ============================================================================
+
+
+def demonstrate_database_library_integration():
+    """Demonstrate how the database library integrates with splurge-exceptions."""
+    print("=== Database Library Integration ===")
+
+    client = DatabaseClient("postgresql://user:pass@localhost/mydb")
+
+    # Demonstrate various error scenarios
+    error_scenarios = [
+        ("Invalid connection", "invalid://connection", SplurgeSqlError),
+        ("Connection timeout", "timeout://connection", SplurgeConnectionError),
+        ("Connection refused", "refused://connection", SplurgeConnectionError),
+    ]
+
+    for description, connection_string, expected_error in error_scenarios:
+        print(f"\n{description}:")
+
+        try:
+            # Test connection with manual error handling
+            if "invalid" in connection_string.lower():
+                raise ValueError("Invalid connection string format")
+            elif "timeout" in connection_string.lower():
+                raise TimeoutError("Connection timeout")
+            elif "refused" in connection_string.lower():
+                raise ConnectionError("Connection refused")
+            else:
+                client.connection = {"status": "connected"}
+                print("  + Connected successfully")
+
+        except expected_error as e:
+            if hasattr(e, "error_code"):
+                formatted = client.formatter.format_error(e, include_context=True, include_suggestions=True)
+                print(f"  + Caught expected error:\n{formatted}")
+            else:
+                print(f"  + Caught expected error: {e}")
+        except Exception as e:
+            print(f"  - Unexpected error: {e}")
+        finally:
+            client.disconnect()
+
+    # Test query scenarios separately
+    print("\nQuery execution scenarios:")
+    client.connection = {"status": "connected"}
+
+    query_scenarios = [
+        ("Empty query", "", SplurgeSqlError),
+        ("Invalid syntax", "SELECT INVALID FROM users", SplurgeSqlError),
+        ("Query timeout", "SELECT TIMEOUT FROM users", SplurgeQueryError),
+        ("Dangerous operation", "DROP TABLE users", SplurgeSqlError),
+    ]
+
+    for description, query, expected_error in query_scenarios:
+        print(f"\n{description}:")
+
+        try:
+            result = client.execute_query(query)
+            print(f"  + Query executed successfully: {len(result)} rows")
+        except expected_error as e:
+            formatted = client.formatter.format_error(e, include_context=True, include_suggestions=True)
+            print(f"  + Caught expected error:\n{formatted}")
+        except Exception as e:
+            print(f"  - Unexpected error: {e}")
+
+    client.disconnect()
+
+
+def demonstrate_data_processing_integration():
+    """Demonstrate how the data processing library integrates with splurge-exceptions."""
+    print("\n=== Data Processing Library Integration ===")
+
+    processor = DataProcessor()
+
+    # Test JSON validation
+    print("\nJSON Schema Validation:")
+
+    schema = {
+        "type": "object",
+        "required": ["name", "email"],
+        "properties": {"name": {"type": "string"}, "email": {"type": "string"}, "age": {"type": "integer"}},
+    }
+
+    test_data = [
+        {"name": "John", "email": "john@example.com"},  # Valid
+        {"name": "Jane"},  # Missing email
+        {"name": "Bob", "email": "bob@example.com", "age": "not-a-number"},  # Wrong type
+    ]
+
+    for i, data in enumerate(test_data):
+        print(f"\nTest case {i + 1}: {data}")
+        try:
+            processor.validate_json_schema(data, schema)
+            print("  + Validation passed")
+        except SplurgeValidationError as e:
+            formatted = processor.formatter.format_error(e, include_context=True)
+            print(f"  - Validation failed:\n{formatted}")
+
+    # Test CSV processing
+    print("\nCSV Processing:")
+
+    csv_data = """name,email,age
+John Doe,john@example.com,25
+Jane Smith,jane@example.com,thirty
+Bob Johnson,bob@example.com,35
+Missing Fields,missing@example.com"""
+
+    try:
+        results = processor.process_csv_data(csv_data)
+        print(f"  + Successfully processed {len(results)} valid rows")
+        for row in results:
+            print(f"    - {row}")
+    except Exception as e:
+        print(f"  - CSV processing failed: {e}")
+
+
+def demonstrate_batch_operations():
+    """Demonstrate batch operations with error aggregation."""
+    print("\n=== Batch Operations with Error Aggregation ===")
+
+    client = DatabaseClient("postgresql://user:pass@localhost/mydb")
+    client.connect()
+
+    # Mix of valid and invalid queries
+    queries = [
+        "SELECT * FROM users LIMIT 10",  # Valid
+        "SELECT INVALID FROM users",  # Invalid syntax
+        "SELECT * FROM products LIMIT 5",  # Valid
+        "SELECT TIMEOUT FROM orders",  # Timeout
+        "SELECT * FROM categories",  # Valid
+    ]
+
+    print("Executing batch queries:")
+    try:
+        results = client.batch_execute(queries)
+        print(f"  + Batch completed with {len(results)} results")
+    except Exception as e:
+        print(f"  - Batch failed: {e}")
+    finally:
+        client.disconnect()
+
+
+def demonstrate_error_context_and_suggestions():
+    """Demonstrate error context and recovery suggestions."""
+    print("\n=== Error Context and Recovery Suggestions ===")
+
+    client = DatabaseClient("postgresql://user:pass@localhost/mydb")
+
+    # Manually create an error to demonstrate context and suggestions
+    try:
+        raise (
+            SplurgeSqlError(
+                error_code="dangerous-operation",
+                message="Dangerous SQL operation detected",
+                details={"operation": "DROP TABLE", "table": "users"},
+            )
+            .attach_context("user_id", "admin")
+            .attach_context("timestamp", "2025-01-01 12:00:00")
+            .add_suggestion("Use SELECT queries for data retrieval instead of DROP")
+            .add_suggestion("Consider using TRUNCATE for removing all rows")
+            .add_suggestion("Check permissions before attempting destructive operations")
+        )
+
+    except SplurgeSqlError as e:
+        formatted = client.formatter.format_error(e, include_context=True, include_suggestions=True)
+        print("Enhanced error with context and suggestions:")
         print(formatted)
-        raise
-
-
-# ============================================================================
-# Main Example Execution
-# ============================================================================
 
 
 if __name__ == "__main__":
-    print("=" * 70)
-    print("SPLURGE FAMILY LIBRARY - API INTEGRATOR USAGE EXAMPLE")
-    print("=" * 70)
+    """Run all library integration demonstrations."""
+    print("Splurge Exceptions - Library Integration Examples")
+    print("=" * 60)
 
-    formatter = ErrorMessageFormatter()
+    demonstrate_database_library_integration()
+    demonstrate_data_processing_integration()
+    demonstrate_batch_operations()
+    demonstrate_error_context_and_suggestions()
 
-    # Example 1: SQL Parsing
-    print("\n### EXAMPLE 1: SQL Query Parsing ###\n")
-    try:
-        query = parse_sql_query("SELECT id, name FROM users WHERE status = 'active'")
-        print("[OK] Query parsed successfully")
-        print(f"  Type: {query['type']}")
-    except SplurgeError as e:
-        print(formatter.format_error(e))
-
-    # Example 2: Unicode Decoding
-    print("\n### EXAMPLE 2: Unicode Decoding ###\n")
-    try:
-        test_bytes = b"Hello, World!"
-        decoded = decode_bytes_to_string(test_bytes)
-        print(f"[OK] Decoded successfully: {decoded}")
-    except SplurgeError as e:
-        print(formatter.format_error(e))
-
-    # Example 3: DSV Parsing
-    print("\n### EXAMPLE 3: DSV Format Parsing ###\n")
-    try:
-        dsv_content = "name,email,age\nAlice,alice@example.com,30\nBob,bob@example.com,25"
-        rows = parse_dsv_content(dsv_content)
-        print(f"[OK] Parsed {len(rows)} rows successfully")
-        for i, row in enumerate(rows):
-            print(f"  Row {i}: {row}")
-    except SplurgeError as e:
-        print(formatter.format_error(e))
-
-    # Example 4: Schema Parsing
-    print("\n### EXAMPLE 4: Data Schema Parsing ###\n")
-    try:
-        schema_json = '{"fields": {"id": {"type": "int"}, "name": {"type": "str"}}}'
-        schema = parse_data_schema(schema_json)
-        print(f"[OK] Schema parsed with {len(schema['fields'])} fields")
-    except SplurgeError as e:
-        print(formatter.format_error(e))
-
-    # Example 5: Database Schema Validation
-    print("\n### EXAMPLE 5: Database Schema Validation ###\n")
-    try:
-        schema_def = {
-            "name": "products",
-            "fields": {"id": {"type": "int"}, "name": {"type": "str"}},
-            "primary_key": "id",
-        }
-        is_valid = validate_database_schema(schema_def)
-        print("[OK] Database schema is valid")
-    except SplurgeError as e:
-        print(formatter.format_error(e))
-
-    # Example 6: Complete Pipeline
-    print("\n### EXAMPLE 6: Complete Data Pipeline ###\n")
-    try:
-        raw_data = b"name,email,age\nAlice,alice@example.com,30\nBob,bob@example.com,25"
-        schema_json = '{"fields": {"name": {"type": "str"}, "email": {"type": "str"}, "age": {"type": "int"}}}'
-        database_query = "SELECT * FROM users WHERE age > 25"
-
-        results = process_data_pipeline(
-            raw_data=raw_data,
-            schema_json=schema_json,
-            database_query=database_query,
-        )
-
-        print("\n" + "=" * 70)
-        print("PIPELINE RESULTS:")
-        print("=" * 70)
-        for key, value in results.items():
-            print(f"  {key}: {value}")
-        print("=" * 70)
-
-    except SplurgeError as e:
-        print(f"Pipeline failed: {e}")
-
-    print("\n[OK] All examples completed!")
+    print("\n" + "=" * 60)
+    print("All library integration examples completed!")
+    print("\nKey takeaways for library integrators:")
+    print("- Extend SplurgeFrameworkError for domain-specific exceptions")
+    print("- Use semantic error codes with hierarchical domains")
+    print("- Leverage context managers and decorators for clean error handling")
+    print("- Provide recovery suggestions for better user experience")
+    print("- Maintain consistent error patterns across your library ecosystem")

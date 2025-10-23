@@ -81,7 +81,7 @@ class SplurgeError(Exception):
         
         Returns:
             Full code including domain
-            Example: "validation.invalid-value"
+            Example: "value.invalid-value"
         """
         ...
     
@@ -197,14 +197,14 @@ class SplurgeError(Exception):
         ...
 ```
 
-### SplurgeValidationError
+### SplurgeValueError
 
 For input validation and data validation errors.
 
 ```python
-class SplurgeValidationError(SplurgeError):
+class SplurgeValueError(SplurgeError):
     """Raised when input validation fails."""
-    _domain = "validation"
+    _domain = "value"
 ```
 
 **Common Error Codes:**
@@ -230,20 +230,20 @@ class SplurgeOSError(SplurgeError):
 - `permission-denied` - Permission denied
 - `io-error` - I/O error
 
-### SplurgeConfigurationError
+### SplurgeLookupError
 
-For configuration and setup errors.
+For lookup and search failures.
 
 ```python
-class SplurgeConfigurationError(SplurgeError):
-    """Raised when configuration is invalid or incomplete."""
-    _domain = "config"
+class SplurgeLookupError(SplurgeError):
+    """Raised for lookup issues."""
+    _domain = "lookup"
 ```
 
 **Common Error Codes:**
-- `missing-key` - Configuration key missing
-- `invalid-value` - Invalid configuration value
-- `parse-error` - Configuration parsing error
+- `not-found` - Item not found
+- `invalid-key` - Invalid lookup key
+- `index-out-of-range` - Index out of range
 
 ### SplurgeRuntimeError
 
@@ -257,64 +257,68 @@ class SplurgeRuntimeError(SplurgeError):
 
 **Common Error Codes:**
 - `operation-failed` - General runtime error
-- `not-implemented` - Feature not implemented
 - `timeout` - Operation timeout
+- `resource-exhausted` - Resource exhausted
 
-### SplurgeAuthenticationError
+### SplurgeTypeError
 
-For authentication failures.
+For type validation and conversion errors.
 
 ```python
-class SplurgeAuthenticationError(SplurgeError):
-    """Raised when authentication fails."""
-    _domain = "authentication"
+class SplurgeTypeError(SplurgeError):
+    """Raised for type validation failures."""
+    _domain = "type"
 ```
 
 **Common Error Codes:**
-- `user-not-found` - User not found
-- `invalid-token` - Invalid token
-- `token-expired` - Token expired
+- `invalid-type` - Invalid type provided
+- `conversion-failed` - Type conversion failed
+- `type-mismatch` - Type mismatch
 
-### SplurgeAuthorizationError
+### SplurgeAttributeError
 
-For authorization/permission failures.
+For missing object attributes and methods.
 
 ```python
-class SplurgeAuthorizationError(SplurgeError):
-    """Raised when authorization fails."""
-    _domain = "authorization"
+class SplurgeAttributeError(SplurgeError):
+    """Exception raised for missing object attributes/methods."""
+    _domain = "attribute"
 ```
 
 **Common Error Codes:**
-- `access-denied` - Insufficient permissions
-- `invalid-role` - Invalid role
+- `missing-attribute` - Attribute does not exist on object
+- `missing-method` - Method does not exist on object
 
-### SplurgeNotImplementedError
+### SplurgeImportError
 
-For unimplemented features.
+For module import and loading failures.
 
 ```python
-class SplurgeNotImplementedError(SplurgeError):
-    """Raised when feature is not implemented."""
-    _domain = "runtime"
+class SplurgeImportError(SplurgeError):
+    """Exception raised for module import failures."""
+    _domain = "import"
 ```
 
 **Common Error Codes:**
-- `not-implemented` - Feature not implemented
+- `module-not-found` - Module could not be imported
+- `import-failed` - Import operation failed
+- `circular-import` - Circular import detected
 
 ### SplurgeFrameworkError
 
-For framework-level errors.
+For framework-level errors and custom domain extensions.
 
 ```python
 class SplurgeFrameworkError(SplurgeError):
-    """Raised for framework-level errors."""
+    """Base exception for framework-specific extensions."""
     _domain = "framework"
 ```
 
 **Common Error Codes:**
 - `framework-error` - Framework-level error
 - `invalid-configuration` - Invalid framework configuration
+
+This class serves as the base for exceptions defined by frameworks built on top of splurge-exceptions. Domain-specific frameworks should inherit from this class to create their own exception hierarchies.
 
 ## Error Code System
 
@@ -328,7 +332,7 @@ domain.semantic-error-code
 ```
 
 **Examples:**
-- `validation.invalid-value` - Validation domain, invalid-value error
+- `value.invalid-value` - Value domain, invalid-value error
 - `database.sql.query.timeout` - Database > SQL > Query domain, timeout error
 - `os.file-not-found` - OS domain, file-not-found error
 
@@ -426,7 +430,7 @@ def wrap_exception(
         ... except ValueError as e:
         ...     wrapped = wrap_exception(
         ...         e,
-        ...         SplurgeValidationError,
+        ...         SplurgeValueError,
         ...         error_code="invalid-value",
         ...         message="Could not parse input as integer",
         ...         context={"input": "invalid", "expected_type": "int"},
@@ -473,7 +477,7 @@ def error_context(
     
     Args:
         exceptions: Dict mapping source to (target exception, error_code)
-                   Format: {ValueError: (SplurgeValidationError, "validation.value.001")}
+                   Format: {ValueError: (SplurgeValueError, "value.value.001")}
         context: Dictionary of context data to attach to exceptions
         on_success: Optional callback executed if no exception occurs
                    Signature: Callable[[], Any]
@@ -496,7 +500,7 @@ def error_context(
         >>> 
         >>> with error_context(
         ...     exceptions={
-        ...         ValueError: (SplurgeValidationError, "validation.001"),
+        ...         ValueError: (SplurgeValueError, "value.001"),
         ...     },
         ...     context={"field": "email"},
         ...     on_success=handle_success,
@@ -550,7 +554,7 @@ def handle_exceptions(
     
     Args:
         exceptions: Dict mapping source to (target exception, error_code)
-                   Format: {ValueError: (SplurgeValidationError, "validation.001")}
+                   Format: {ValueError: (SplurgeValueError, "value.001")}
         log_level: Logging level for exceptions
                   Options: "debug", "info", "warning", "error", "critical"
                   Default: "error"
@@ -563,7 +567,7 @@ def handle_exceptions(
     Example:
         >>> @handle_exceptions(
         ...     exceptions={
-        ...         ValueError: (SplurgeValidationError, "validation.001"),
+        ...         ValueError: (SplurgeValueError, "value.001"),
         ...         FileNotFoundError: (SplurgeOSError, "os.file.001"),
         ...     },
         ...     log_level="error",
@@ -626,7 +630,7 @@ class ErrorMessageFormatter:
         
         Example:
             >>> formatter = ErrorMessageFormatter()
-            >>> error = SplurgeValidationError(
+            >>> error = SplurgeValueError(
             ...     error_code="invalid-email",
             ...     message="Invalid email format"
             ... )
@@ -687,13 +691,13 @@ from splurge_exceptions import (
     # Base exception
     SplurgeError,
     # Specific exceptions
-    SplurgeValidationError,
+    SplurgeValueError,
     SplurgeOSError,
-    SplurgeConfigurationError,
+    SplurgeLookupError,
     SplurgeRuntimeError,
-    SplurgeAuthenticationError,
-    SplurgeAuthorizationError,
-    SplurgeNotImplementedError,
+    SplurgeTypeError,
+    SplurgeAttributeError,
+    SplurgeImportError,
     SplurgeFrameworkError,
     # Utilities
     wrap_exception,
@@ -701,9 +705,6 @@ from splurge_exceptions import (
     error_context,
     ErrorMessageFormatter,
 )
-```
-
-Note: The ErrorCodeRegistry and error code registration system were removed in version 2025.0.0 in favor of semantic, user-defined error codes.
 
 ## Error Handling Best Practices
 

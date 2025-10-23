@@ -5,7 +5,8 @@ All notable changes to Splurge Exceptions will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Calendar Versioning](https://calver.org/).
 
-## [2025.0.0] - 2025-10-20
+
+## [2025.0.0] - 2025-10-23
 
 ### Initial Release ✨
 
@@ -15,13 +16,13 @@ This is the inaugural release of Splurge Exceptions, a comprehensive Python exce
 
 ##### Core Exception Classes
 - `SplurgeError` - Base exception class
-- `SplurgeValidationError` - Input validation errors
+- `SplurgeValueError` - Input validation errors
 - `SplurgeOSError` - Operating system errors
-- `SplurgeConfigurationError` - Configuration issues
 - `SplurgeRuntimeError` - Runtime execution errors
-- `SplurgeAuthenticationError` - Authentication failures
-- `SplurgeAuthorizationError` - Authorization failures
-- `SplurgeNotImplementedError` - Unimplemented features
+- `SplurgeTypeError` - Type errors
+- `SplurgeLookupError` - Lookup failures
+- `SplurgeAttributeError` - For missing object attributes/methods (domain: "attribute")
+- `SplurgeImportError` - For module import failures (domain: "import")
 - `SplurgeFrameworkError` - Framework-level errors
 
 ##### Exception Features
@@ -130,8 +131,8 @@ This is the inaugural release of Splurge Exceptions, a comprehensive Python exce
 - Backward-compatible with standard exceptions
 
 **Error Code Organization**
-- Semantic format: `domain-error-code` (e.g., "database-sql-syntax-error")
-- User-specified codes with domain prefix
+- Semantic format: `domain-error-code` (e.g., "database.sql-syntax-error")
+- User-specified codes with domain prefix (e.g., "database", "os", "framework")
 - Support for domain hierarchies
 - No automatic registry lookups
 

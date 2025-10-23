@@ -2,24 +2,20 @@
 
 from splurge_exceptions.core.base import SplurgeError
 from splurge_exceptions.core.exceptions import (
-    SplurgeAuthenticationError,
-    SplurgeAuthorizationError,
-    SplurgeConfigurationError,
     SplurgeFrameworkError,
-    SplurgeNotImplementedError,
+    SplurgeLookupError,
     SplurgeOSError,
     SplurgeRuntimeError,
-    SplurgeValidationError,
+    SplurgeTypeError,
+    SplurgeValueError,
 )
 
 __all__ = [
     "SplurgeError",
-    "SplurgeValidationError",
+    "SplurgeValueError",
     "SplurgeOSError",
-    "SplurgeConfigurationError",
+    "SplurgeLookupError",
     "SplurgeRuntimeError",
-    "SplurgeAuthenticationError",
-    "SplurgeAuthorizationError",
-    "SplurgeNotImplementedError",
+    "SplurgeTypeError",
     "SplurgeFrameworkError",
 ]

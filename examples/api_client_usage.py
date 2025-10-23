@@ -5,362 +5,342 @@ in a typical API client library for error handling, exception conversion,
 and user-friendly error reporting.
 
 Key Concepts:
-- Wrapping stdlib exceptions to structured Splurge exceptions
-- Using context managers for resource cleanup with error handling
-- Using decorators for automatic exception conversion
-- Formatting errors for user-friendly output
-- Managing error codes and registries
+- Using libraries that internally use splurge-exceptions
+- Handling various error scenarios in client applications
+- Proper error propagation and context attachment
+- Using different exception handling patterns
 """
 
 from typing import Any
 
+# Simulate a database client library that uses splurge-exceptions internally
 from splurge_exceptions import (
-    SplurgeAuthenticationError,
-    SplurgeConfigurationError,
-    SplurgeError,
+    ErrorMessageFormatter,
     SplurgeOSError,
     SplurgeRuntimeError,
-    SplurgeValidationError,
+    SplurgeValueError,
     error_context,
     handle_exceptions,
-    wrap_exception,
 )
-from splurge_exceptions.formatting.message import ErrorMessageFormatter
 
 # ============================================================================
-# Section 1: Basic Exception Wrapping
+# Simulated Database Client Library (uses splurge-exceptions internally)
 # ============================================================================
 
 
-def fetch_user_data(user_id: int) -> dict[str, Any]:
-    """Fetch user data from API - demonstrates exception wrapping.
+class DatabaseConnection:
+    """Simulated database client that uses splurge-exceptions internally."""
 
-    This function shows how to catch stdlib exceptions and wrap them
-    with meaningful Splurge exceptions.
+    def __init__(self, host: str, port: int, database: str):
+        """Initialize database connection.
 
-    Args:
-        user_id: The user ID to fetch
+        Args:
+            host: Database host
+            port: Database port
+            database: Database name
+        """
+        self.host = host
+        self.port = port
+        self.database = database
+        self.connected = False
 
-    Returns:
-        User data dictionary
+    def connect(self) -> None:
+        """Connect to database."""
+        # Simulate connection logic
+        if not self.host:
+            raise SplurgeValueError(error_code="invalid-host", message="Database host cannot be empty")
 
-    Raises:
-        SplurgeValidationError: If user_id is invalid
-        SplurgeRuntimeError: If API call fails
-    """
-    if not isinstance(user_id, int) or user_id <= 0:
-        try:
-            raise ValueError(f"Invalid user_id: {user_id}. Must be positive integer.")
-        except ValueError as e:
-            # Wrap stdlib exception with context
-            error = wrap_exception(
-                e,
-                SplurgeValidationError,
-                error_code="invalid-value",
+        if self.port < 1 or self.port > 65535:
+            raise SplurgeValueError(error_code="invalid-port", message=f"Invalid port number: {self.port}")
+
+        # Simulate connection failure
+        if self.host == "invalid.example.com":
+            raise SplurgeOSError(
+                error_code="connection-failed",
+                message="Failed to connect to database",
+                details={"host": self.host, "port": self.port},
             )
-            error.attach_context(key="provided_value", value=user_id)
-            error.add_suggestion("Ensure user_id is a positive integer")
-            raise error from e
+
+        self.connected = True
+
+    def execute_query(self, query: str, params: list[Any] | None = None) -> list[dict[str, Any]]:
+        """Execute a database query.
+
+        Args:
+            query: SQL query string
+            params: Query parameters
+
+        Returns:
+            Query results as list of dictionaries
+        """
+        if not self.connected:
+            raise SplurgeRuntimeError(error_code="not-connected", message="Database connection not established")
+
+        if not query.strip():
+            raise SplurgeValueError(error_code="empty-query", message="Query cannot be empty")
+
+        # Simulate query execution with potential failures
+        if "INVALID" in query.upper():
+            raise SplurgeValueError(error_code="invalid-syntax", message="Invalid SQL syntax", details={"query": query})
+
+        if "TIMEOUT" in query.upper():
+            raise SplurgeRuntimeError(
+                error_code="query-timeout",
+                message="Query execution timed out",
+                details={"timeout": "30s", "query": query},
+            )
+
+        # Simulate successful query execution
+        return [{"id": 1, "name": "Sample Data", "value": 42}]
+
+    def disconnect(self) -> None:
+        """Disconnect from database."""
+        self.connected = False
+
+
+# ============================================================================
+# Application Code (Client Usage)
+# ============================================================================
+
+
+class UserService:
+    """Application service that uses the database client."""
+
+    def __init__(self, db_host: str = "localhost", db_port: int = 5432):
+        """Initialize user service.
+
+        Args:
+            db_host: Database host
+            db_port: Database port
+        """
+        self.db = DatabaseConnection(db_host, db_port, "users")
+        self.formatter = ErrorMessageFormatter()
+
+    @handle_exceptions(
+        exceptions={
+            SplurgeOSError: (SplurgeRuntimeError, "database-connection-error"),
+            SplurgeRuntimeError: (SplurgeRuntimeError, "database-operation-error"),
+            SplurgeValueError: (SplurgeValueError, "database-validation-error"),
+        },
+        log_level="error",
+    )
+    def get_user_by_id(self, user_id: int) -> dict[str, Any] | None:
+        """Get user by ID with comprehensive error handling.
+
+        Args:
+            user_id: User ID to lookup
+
+        Returns:
+            User data or None if not found
+        """
+        # Connect to database
+        self.db.connect()
+
+        try:
+            # Execute query
+            query = "SELECT * FROM users WHERE id = %s"
+            results = self.db.execute_query(query, [user_id])
+
+            if not results:
+                return None
+
+            return results[0]
+
+        finally:
+            # Always disconnect
+            self.db.disconnect()
+
+    def batch_get_users(self, user_ids: list[int]) -> list[dict[str, Any]]:
+        """Get multiple users by IDs using context manager.
+
+        Args:
+            user_ids: List of user IDs
+
+        Returns:
+            List of user data
+        """
+        results = []
+
+        def handle_success():
+            print(f"Successfully retrieved {len(results)} users")
+
+        def handle_error(exc):
+            print(f"Error retrieving users: {self.formatter.format_error(exc)}")
+
+        for user_id in user_ids:
+            with error_context(
+                exceptions={
+                    SplurgeOSError: (SplurgeRuntimeError, "connection-error"),
+                    SplurgeRuntimeError: (SplurgeRuntimeError, "query-error"),
+                    SplurgeValueError: (SplurgeValueError, "validation-error"),
+                },
+                context={"user_id": user_id, "operation": "batch_get"},
+                on_success=handle_success,
+                on_error=handle_error,
+                suppress=False,
+            ):
+                user_data = self.get_user_by_id(user_id)
+                if user_data:
+                    results.append(user_data)
+
+        return results
+
+    def create_user_with_validation(self, user_data: dict[str, Any]) -> int:
+        """Create user with comprehensive validation and error handling.
+
+        Args:
+            user_data: User data to create
+
+        Returns:
+            Created user ID
+        """
+        # Validate input
+        if not isinstance(user_data, dict):
+            raise SplurgeValueError(error_code="invalid-input-type", message="User data must be a dictionary")
+
+        required_fields = ["name", "email"]
+        for field in required_fields:
+            if field not in user_data:
+                raise SplurgeValueError(
+                    error_code="missing-required-field",
+                    message=f"Required field '{field}' is missing",
+                    details={"field": field, "provided_fields": list(user_data.keys())},
+                )
+
+        # Simulate database operations with error handling
+        with error_context(
+            exceptions={
+                SplurgeOSError: (SplurgeRuntimeError, "database-connection-error"),
+                SplurgeRuntimeError: (SplurgeRuntimeError, "database-operation-error"),
+                SplurgeValueError: (SplurgeValueError, "database-validation-error"),
+            },
+            context={"operation": "create_user", "user_email": user_data.get("email")},
+        ):
+            self.db.connect()
+
+            try:
+                # Validate email format
+                email = user_data["email"]
+                if "@" not in email:
+                    raise SplurgeValueError(
+                        error_code="invalid-email-format", message="Invalid email format", details={"email": email}
+                    )
+
+                # Simulate user creation
+                query = "INSERT INTO users (name, email) VALUES (%s, %s)"
+                self.db.execute_query(query, [user_data["name"], email])
+
+                # Return simulated user ID
+                return 12345
+
+            finally:
+                self.db.disconnect()
+
+
+# ============================================================================
+# Example Usage Demonstrations
+# ============================================================================
+
+
+def demonstrate_basic_usage():
+    """Demonstrate basic API client usage."""
+    print("=== Basic API Client Usage ===")
+
+    service = UserService()
 
     try:
-        # Simulate API call
-        response = {"id": user_id, "name": "John Doe", "email": "john@example.com"}
-        if user_id == 999:  # Simulate error condition
-            raise ConnectionError("Failed to connect to API")
-        return response
-    except ConnectionError as e:
-        # Wrap connection errors with meaningful error code
-        error = wrap_exception(
-            e,
-            SplurgeRuntimeError,
-            error_code="connection-failed",
-        )
-        error.attach_context(key="endpoint", value="/api/users")
-        error.attach_context(key="retry_count", value=3)
-        error.add_suggestion("Check your network connection")
-        error.add_suggestion("Verify the API endpoint is accessible")
-        raise error from e
+        # Valid user lookup
+        user = service.get_user_by_id(1)
+        print(f"Found user: {user}")
+
+    except SplurgeValueError as e:
+        print(f"Validation error: {e}")
+    except SplurgeRuntimeError as e:
+        print(f"Runtime error: {e}")
+    except Exception as e:
+        print(f"Unexpected error: {e}")
 
 
-# ============================================================================
-# Section 2: Context Manager for Resource Management
-# ============================================================================
+def demonstrate_batch_operations():
+    """Demonstrate batch operations with error handling."""
+    print("\n=== Batch Operations ===")
+
+    service = UserService()
+
+    # Mix of valid and invalid user IDs
+    user_ids = [1, 2, 999, 3]
+
+    try:
+        users = service.batch_get_users(user_ids)
+        print(f"Retrieved {len(users)} users successfully")
+        for user in users:
+            print(f"  - {user}")
+    except Exception as e:
+        print(f"Batch operation failed: {e}")
 
 
-def process_file_with_error_handling(file_path: str) -> str:
-    """Process a file with error handling using context manager.
+def demonstrate_validation_and_error_formatting():
+    """Demonstrate validation and error formatting."""
+    print("\n=== Validation and Error Formatting ===")
 
-    Demonstrates using error_context to handle multiple exception types
-    with automatic conversion and context tracking.
+    service = UserService()
+    formatter = ErrorMessageFormatter()
 
-    Args:
-        file_path: Path to the file to process
+    # Test various validation scenarios
+    test_cases = [
+        {"name": "John", "email": "john@example.com"},  # Valid
+        {"name": "Jane"},  # Missing email
+        {"email": "invalid-email"},  # Invalid email format
+        "not a dict",  # Invalid input type
+    ]
 
-    Returns:
-        Processed content
+    for i, user_data in enumerate(test_cases):
+        print(f"\nTest case {i + 1}: {user_data}")
 
-    Raises:
-        SplurgeOSError: If file operations fail
-        SplurgeValidationError: If file validation fails
-    """
-    context_data = {"file_path": file_path, "operation": "read_and_process"}
+        try:
+            user_id = service.create_user_with_validation(user_data)
+            print(f"  + Created user with ID: {user_id}")
+        except Exception as e:
+            formatted_error = formatter.format_error(e, include_context=True, include_suggestions=True)
+            print(f"  - Error:\n{formatted_error}")
 
-    def on_success() -> None:
-        """Called if no exception occurs."""
-        print(f"Successfully processed {file_path}")
 
-    def on_error(exc: Exception) -> None:
-        """Called when an exception is caught."""
-        print(f"Error during processing: {exc}")
+def demonstrate_error_context_and_callbacks():
+    """Demonstrate context managers with callbacks."""
+    print("\n=== Context Managers with Callbacks ===")
 
+    service = UserService()
+
+    def log_success():
+        print("  ✓ User operation completed successfully")
+
+    def log_error(exc):
+        print(f"  ✗ User operation failed: {exc.error_code}")
+
+    # Demonstrate context manager with callbacks
     with error_context(
         exceptions={
-            FileNotFoundError: (SplurgeOSError, "file-not-found"),
-            PermissionError: (SplurgeOSError, "permission-denied"),
-            ValueError: (SplurgeValidationError, "invalid-content"),
+            SplurgeValueError: (SplurgeValueError, "user-validation-error"),
+            SplurgeRuntimeError: (SplurgeRuntimeError, "user-operation-error"),
         },
-        context=context_data,
-        on_success=on_success,
-        on_error=on_error,
-        suppress=False,
+        context={"operation": "user_lookup"},
+        on_success=log_success,
+        on_error=log_error,
     ):
-        # File operations
-        with open(file_path) as f:
-            content = f.read()
-
-        # Validation
-        if not content.strip():
-            raise ValueError("File content is empty")
-
-        # Processing
-        processed = content.upper()
-        return processed
-
-
-# ============================================================================
-# Section 3: Decorator-Based Exception Conversion
-# ============================================================================
-
-
-@handle_exceptions(
-    exceptions={
-        ValueError: (SplurgeValidationError, "invalid-value"),
-        KeyError: (SplurgeValidationError, "validation.json.002"),
-        TypeError: (SplurgeRuntimeError, "runtime.type.001"),
-    },
-    log_level="warning",
-)
-def parse_json_config(json_data: str) -> dict[str, Any]:
-    """Parse JSON configuration with automatic exception conversion.
-
-    The decorator automatically converts any ValueError, KeyError, or TypeError
-    to the corresponding Splurge exception with the specified error code.
-
-    Args:
-        json_data: JSON string to parse
-
-    Returns:
-        Parsed configuration dictionary
-
-    Raises:
-        SplurgeValidationError: If JSON parsing fails
-        SplurgeRuntimeError: If type conversion fails
-    """
-    import json
-
-    data: dict[str, Any] = json.loads(json_data)  # May raise ValueError
-
-    # Type conversion (may raise TypeError)
-    if "port" in data:
-        data["port"] = int(data["port"])
-    if "timeout" in data:
-        data["timeout"] = float(data["timeout"])
-
-    return data
-
-
-# ============================================================================
-# Section 4: Error Formatting and User-Friendly Output
-# ============================================================================
-
-
-def handle_api_call_with_formatting() -> None:
-    """Demonstrate error formatting for user-friendly output."""
-    formatter = ErrorMessageFormatter()
-
-    try:
-        _ = fetch_user_data(user_id=-1)
-    except SplurgeValidationError as e:
-        # Format error with context and suggestions
-        formatted_message = formatter.format_error(
-            e,
-            include_context=True,
-            include_suggestions=True,
-        )
-        print("=" * 70)
-        print("USER-FRIENDLY ERROR MESSAGE:")
-        print("=" * 70)
-        print(formatted_message)
-        print("=" * 70)
-
-
-# ============================================================================
-# Section 5: Chaining and Exception Context
-# ============================================================================
-
-
-def create_api_client_with_auth(api_key: str | None = None) -> dict[str, Any]:
-    """Initialize API client with authentication.
-
-    Demonstrates how to validate configuration and chain exceptions
-    with meaningful context.
-
-    Args:
-        api_key: API key for authentication
-
-    Returns:
-        Client configuration
-
-    Raises:
-        SplurgeConfigurationError: If configuration is invalid
-        SplurgeAuthenticationError: If API key is missing
-    """
-    if api_key is None:
-        try:
-            raise ValueError("API key is required")
-        except ValueError as e:
-            error = wrap_exception(
-                e,
-                SplurgeAuthenticationError,
-                error_code="auth.api_key.001",
-            )
-            error.attach_context(key="config_source", value="environment")
-            error.add_suggestion("Set SPLURGE_API_KEY environment variable")
-            error.add_suggestion("Or pass api_key parameter to create_api_client_with_auth()")
-            raise error from e
-
-    if len(api_key) < 32:
-        try:
-            raise ValueError(f"API key too short: {len(api_key)} chars")
-        except ValueError as e:
-            error = wrap_exception(
-                e,
-                SplurgeConfigurationError,
-                error_code="config.api_key.001",
-            )
-            error.attach_context(key="expected_length", value=32)
-            error.attach_context(key="actual_length", value=len(api_key))
-            raise error from e
-
-    return {"api_key": api_key, "base_url": "https://api.example.com"}
-
-
-# ============================================================================
-# Section 6: Composite Exception Handling
-# ============================================================================
-
-
-def perform_api_workflow(user_id: int, file_path: str, api_key: str) -> None:
-    """Perform a complete API workflow with comprehensive error handling.
-
-    This demonstrates using multiple exception handling strategies together:
-    - Decorator-based conversion (parse_json_config)
-    - Context manager (process_file_with_error_handling)
-    - Direct exception wrapping (create_api_client_with_auth, fetch_user_data)
-
-    Args:
-        user_id: User ID for the API call
-        file_path: Path to configuration file
-        api_key: API key for authentication
-    """
-    formatter = ErrorMessageFormatter()
-
-    try:
-        # Step 1: Initialize client
-        print("Step 1: Initializing API client...")
-        client = create_api_client_with_auth(api_key)
-        print(f"[OK] Client initialized with key: {client['api_key'][:8]}...")
-
-        # Step 2: Fetch user data
-        print("\nStep 2: Fetching user data...")
-        user_data = fetch_user_data(user_id)
-        print(f"[OK] User data fetched: {user_data}")
-
-        # Step 3: Process configuration file
-        print("\nStep 3: Processing configuration file...")
-        file_content = process_file_with_error_handling(file_path)
-        print(f"[OK] File processed ({len(file_content)} chars)")
-
-        # Step 4: Parse JSON configuration
-        print("\nStep 4: Parsing JSON configuration...")
-        config = parse_json_config(file_content)
-        print(f"[OK] Configuration parsed with {len(config)} settings")
-
-        print("\n" + "=" * 70)
-        print("WORKFLOW COMPLETED SUCCESSFULLY!")
-        print("=" * 70)
-
-    except Exception as e:
-        # Catch any Splurge exception and format it
-        print("\n" + "=" * 70)
-        print("WORKFLOW FAILED!")
-        print("=" * 70)
-        if isinstance(e, SplurgeError):
-            formatted = formatter.format_error(e)
-            print(formatted)
-        else:
-            print(f"Unexpected error: {e}")
-        raise
-
-
-# ============================================================================
-# Main Example Execution
-# ============================================================================
+        user = service.get_user_by_id(1)
+        if user:
+            print(f"  Retrieved user: {user['name']}")
 
 
 if __name__ == "__main__":
-    print("=" * 70)
-    print("SPLURGE EXCEPTIONS FRAMEWORK - API CLIENT USAGE EXAMPLE")
-    print("=" * 70)
+    """Run all demonstrations."""
+    print("Splurge Exceptions - API Client Usage Examples")
+    print("=" * 50)
 
-    # Example 1: Basic error formatting
-    print("\n\n### EXAMPLE 1: Error Formatting ###\n")
-    try:
-        handle_api_call_with_formatting()
-    except Exception as e:
-        print(f"Exception caught: {e}")
+    demonstrate_basic_usage()
+    demonstrate_batch_operations()
+    demonstrate_validation_and_error_formatting()
+    demonstrate_error_context_and_callbacks()
 
-    # Example 2: Configuration error
-    print("\n\n### EXAMPLE 2: Configuration Error ###\n")
-    try:
-        client = create_api_client_with_auth(api_key=None)
-    except SplurgeAuthenticationError as e:
-        formatter = ErrorMessageFormatter()
-        print(formatter.format_error(e))
-
-    # Example 3: Complete workflow (with valid inputs for demo)
-    print("\n\n### EXAMPLE 3: Complete Workflow ###\n")
-    try:
-        # Create a temporary config file for the example
-        import os
-        import tempfile
-
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp:
-            tmp.write('{"host": "localhost", "port": "8080", "timeout": "30.0"}')
-            tmp_path = tmp.name
-
-        try:
-            perform_api_workflow(
-                user_id=123,
-                file_path=tmp_path,
-                api_key="a" * 32,
-            )
-        finally:
-            # Cleanup
-            if os.path.exists(tmp_path):
-                os.unlink(tmp_path)
-
-    except Exception as e:
-        print(f"Workflow error: {e}")
-
-    print("\n[OK] All examples completed successfully!")
+    print("\n" + "=" * 50)
+    print("All examples completed!")

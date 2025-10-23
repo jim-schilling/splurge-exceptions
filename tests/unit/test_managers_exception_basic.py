@@ -9,7 +9,7 @@ import pytest
 from splurge_exceptions import (
     SplurgeOSError,
     SplurgeRuntimeError,
-    SplurgeValidationError,
+    SplurgeValueError,
 )
 from splurge_exceptions.managers.exception import error_context
 
@@ -33,10 +33,10 @@ class TestErrorContextBasic:
 
     def test_context_manager_with_exception_mapping(self) -> None:
         """Test context manager converts exception using mapping."""
-        with pytest.raises(SplurgeValidationError):
+        with pytest.raises(SplurgeValueError):
             with error_context(
                 exceptions={
-                    ValueError: (SplurgeValidationError, "invalid-value"),
+                    ValueError: (SplurgeValueError, "invalid-value"),
                 }
             ):
                 raise ValueError("Invalid value")
@@ -44,10 +44,10 @@ class TestErrorContextBasic:
     def test_context_manager_with_multiple_exception_mappings(self) -> None:
         """Test context manager with multiple exception mappings."""
         # Test first mapping
-        with pytest.raises(SplurgeValidationError):
+        with pytest.raises(SplurgeValueError):
             with error_context(
                 exceptions={
-                    ValueError: (SplurgeValidationError, "invalid-value"),
+                    ValueError: (SplurgeValueError, "invalid-value"),
                     FileNotFoundError: (SplurgeOSError, "file-not-found"),
                 }
             ):
@@ -57,7 +57,7 @@ class TestErrorContextBasic:
         with pytest.raises(SplurgeOSError):
             with error_context(
                 exceptions={
-                    ValueError: (SplurgeValidationError, "invalid-value"),
+                    ValueError: (SplurgeValueError, "invalid-value"),
                     FileNotFoundError: (SplurgeOSError, "file-not-found"),
                 }
             ):
@@ -68,7 +68,7 @@ class TestErrorContextBasic:
         with pytest.raises(RuntimeError):
             with error_context(
                 exceptions={
-                    ValueError: (SplurgeValidationError, "invalid-value"),
+                    ValueError: (SplurgeValueError, "invalid-value"),
                 }
             ):
                 raise RuntimeError("Unmapped error")
@@ -76,10 +76,10 @@ class TestErrorContextBasic:
     def test_context_manager_preserves_exception_chain(self) -> None:
         """Test that original exception is preserved in __cause__."""
         original_error = ValueError("Original")
-        with pytest.raises(SplurgeValidationError) as exc_info:
+        with pytest.raises(SplurgeValueError) as exc_info:
             with error_context(
                 exceptions={
-                    ValueError: (SplurgeValidationError, "invalid-value"),
+                    ValueError: (SplurgeValueError, "invalid-value"),
                 }
             ):
                 raise original_error
@@ -125,17 +125,17 @@ class TestErrorContextWithCallbacks:
             nonlocal caught_exception
             caught_exception = exc
 
-        with pytest.raises(SplurgeValidationError):
+        with pytest.raises(SplurgeValueError):
             with error_context(
                 exceptions={
-                    ValueError: (SplurgeValidationError, "invalid-value"),
+                    ValueError: (SplurgeValueError, "invalid-value"),
                 },
                 on_error=on_error,
             ):
                 raise ValueError("Test error")
 
         assert caught_exception is not None
-        assert isinstance(caught_exception, SplurgeValidationError)
+        assert isinstance(caught_exception, SplurgeValueError)
 
     def test_on_error_not_called_on_success(self) -> None:
         """Test that on_error is not called if no exception."""
@@ -177,7 +177,7 @@ class TestErrorContextSuppression:
         """Test that suppress=True suppresses exceptions."""
         with error_context(
             exceptions={
-                ValueError: (SplurgeValidationError, "invalid-value"),
+                ValueError: (SplurgeValueError, "invalid-value"),
             },
             suppress=True,
         ):
@@ -187,10 +187,10 @@ class TestErrorContextSuppression:
 
     def test_suppress_false_reraises_exception(self) -> None:
         """Test that suppress=False reraises exceptions."""
-        with pytest.raises(SplurgeValidationError):
+        with pytest.raises(SplurgeValueError):
             with error_context(
                 exceptions={
-                    ValueError: (SplurgeValidationError, "invalid-value"),
+                    ValueError: (SplurgeValueError, "invalid-value"),
                 },
                 suppress=False,
             ):
@@ -200,7 +200,7 @@ class TestErrorContextSuppression:
         """Test suppress with unmapped exception suppresses it."""
         with error_context(
             exceptions={
-                ValueError: (SplurgeValidationError, "invalid-value"),
+                ValueError: (SplurgeValueError, "invalid-value"),
             },
             suppress=True,
         ):
@@ -214,10 +214,10 @@ class TestErrorContextWithContext:
 
     def test_context_attachment_on_exception(self) -> None:
         """Test that context is attached to converted exceptions."""
-        with pytest.raises(SplurgeValidationError) as exc_info:
+        with pytest.raises(SplurgeValueError) as exc_info:
             with error_context(
                 exceptions={
-                    ValueError: (SplurgeValidationError, "invalid-value"),
+                    ValueError: (SplurgeValueError, "invalid-value"),
                 },
                 context={"field": "email", "value": "invalid"},
             ):
@@ -231,7 +231,7 @@ class TestErrorContextWithContext:
         with pytest.raises(RuntimeError):
             with error_context(
                 exceptions={
-                    ValueError: (SplurgeValidationError, "invalid-value"),
+                    ValueError: (SplurgeValueError, "invalid-value"),
                 },
                 context={"field": "email"},
             ):
@@ -243,10 +243,10 @@ class TestErrorContextErrorCodeResolution:
 
     def test_fully_qualified_error_code(self) -> None:
         """Test context manager with fully qualified error code."""
-        with pytest.raises(SplurgeValidationError) as exc_info:
+        with pytest.raises(SplurgeValueError) as exc_info:
             with error_context(
                 exceptions={
-                    ValueError: (SplurgeValidationError, "invalid-value"),
+                    ValueError: (SplurgeValueError, "invalid-value"),
                 }
             ):
                 raise ValueError("Invalid")
@@ -255,10 +255,10 @@ class TestErrorContextErrorCodeResolution:
 
     def test_partial_error_code(self) -> None:
         """Test context manager with partial error code."""
-        with pytest.raises(SplurgeValidationError) as exc_info:
+        with pytest.raises(SplurgeValueError) as exc_info:
             with error_context(
                 exceptions={
-                    ValueError: (SplurgeValidationError, "validation"),
+                    ValueError: (SplurgeValueError, "validation"),
                 }
             ):
                 raise ValueError("Invalid")
@@ -273,7 +273,7 @@ class TestErrorContextErrorCodeResolution:
         with pytest.raises(ValueError, match="error_code cannot be empty"):
             with error_context(
                 exceptions={
-                    ValueError: (SplurgeValidationError, None),
+                    ValueError: (SplurgeValueError, None),
                 }
             ):
                 raise ValueError("Invalid")
@@ -304,10 +304,10 @@ class TestErrorContextEdgeCases:
             raise RuntimeError("Callback error")
 
         # The callback error is raised instead of the wrapped exception
-        with pytest.raises(SplurgeValidationError):
+        with pytest.raises(SplurgeValueError):
             with error_context(
                 exceptions={
-                    ValueError: (SplurgeValidationError, "invalid-value"),
+                    ValueError: (SplurgeValueError, "invalid-value"),
                 },
                 on_error=on_error_with_error,
             ):
@@ -315,7 +315,7 @@ class TestErrorContextEdgeCases:
 
     def test_nested_context_managers(self) -> None:
         """Test nested context managers."""
-        with pytest.raises(SplurgeValidationError):
+        with pytest.raises(SplurgeValueError):
             with error_context(
                 exceptions={
                     RuntimeError: (SplurgeRuntimeError, "operation-failed"),
@@ -323,7 +323,7 @@ class TestErrorContextEdgeCases:
             ):
                 with error_context(
                     exceptions={
-                        ValueError: (SplurgeValidationError, "invalid-value"),
+                        ValueError: (SplurgeValueError, "invalid-value"),
                     }
                 ):
                     raise ValueError("Inner error")
@@ -337,6 +337,82 @@ class TestErrorContextEdgeCases:
 
         result = get_value()
         assert result == 42
+
+    def test_base_exception_not_exception_is_reraised(self) -> None:
+        """Test that BaseException that's not Exception is re-raised immediately."""
+        with pytest.raises(KeyboardInterrupt):
+            with error_context():
+                raise KeyboardInterrupt("User interrupted")
+
+    def test_system_exit_is_reraised(self) -> None:
+        """Test that SystemExit is re-raised immediately."""
+        with pytest.raises(SystemExit):
+            with error_context():
+                raise SystemExit("Exiting")
+
+    def test_on_error_callback_exception_without_mapping_suppress_false(self) -> None:
+        """Test on_error callback exception when suppress=False and no mapping."""
+
+        def failing_callback(exc: Exception) -> None:
+            raise RuntimeError("Callback failed")
+
+        # Should raise the callback exception, not the original
+        with pytest.raises(RuntimeError, match="Callback failed"):
+            with error_context(
+                on_error=failing_callback,
+                suppress=False,
+            ):
+                raise ValueError("Original error")
+
+    def test_on_error_callback_exception_without_mapping_suppress_true(self) -> None:
+        """Test on_error callback exception when suppress=True and no mapping."""
+
+        def failing_callback(exc: Exception) -> None:
+            raise RuntimeError("Callback failed")
+
+        # Should suppress the callback exception when suppress=True
+        with error_context(
+            on_error=failing_callback,
+            suppress=True,
+        ):
+            raise ValueError("Original error")
+
+        # No exception should be raised
+
+    def test_on_error_callback_exception_with_mapping_suppress_false(self) -> None:
+        """Test on_error callback exception when suppress=False and mapping exists."""
+
+        def failing_callback(exc: Exception) -> None:
+            raise RuntimeError("Callback failed")
+
+        # Should raise the wrapped exception, not the callback exception
+        with pytest.raises(SplurgeValueError, match="invalid-value"):
+            with error_context(
+                exceptions={
+                    ValueError: (SplurgeValueError, "invalid-value"),
+                },
+                on_error=failing_callback,
+                suppress=False,
+            ):
+                raise ValueError("Original error")
+
+    def test_on_error_callback_exception_with_mapping_suppress_true(self) -> None:
+        """Test on_error callback exception when suppress=True and mapping exists."""
+
+        def failing_callback(exc: Exception) -> None:
+            raise RuntimeError("Callback failed")
+
+        # Should suppress when callback fails and suppress=True
+        with error_context(
+            exceptions={
+                ValueError: (SplurgeValueError, "invalid-value"),
+            },
+            on_error=failing_callback,
+            suppress=True,
+        ):
+            raise ValueError("Original error")
+
+        # No exception should be raised
 
 
 class TestErrorContextIntegration:
@@ -366,10 +442,10 @@ class TestErrorContextIntegration:
         success = False
         error = None
 
-        with pytest.raises(SplurgeValidationError):
+        with pytest.raises(SplurgeValueError):
             with error_context(
                 exceptions={
-                    ValueError: (SplurgeValidationError, "invalid-value"),
+                    ValueError: (SplurgeValueError, "invalid-value"),
                 },
                 on_success=on_success,
                 on_error=on_error,
@@ -397,20 +473,20 @@ class TestErrorContextIntegration:
         try:
             with error_context(
                 exceptions={
-                    ValueError: (SplurgeValidationError, "invalid-value"),
+                    ValueError: (SplurgeValueError, "invalid-value"),
                 },
                 on_success=on_success,
                 on_error=on_error,
             ):
                 raise ValueError("Error")
-        except SplurgeValidationError:
+        except SplurgeValueError:
             pass
 
         # Scenario 3: Unmapped error
         try:
             with error_context(
                 exceptions={
-                    ValueError: (SplurgeValidationError, "invalid-value"),
+                    ValueError: (SplurgeValueError, "invalid-value"),
                 },
                 on_success=on_success,
                 on_error=on_error,
@@ -420,7 +496,7 @@ class TestErrorContextIntegration:
             pass
 
         assert "success" in scenarios
-        assert "error:SplurgeValidationError" in scenarios
+        assert "error:SplurgeValueError" in scenarios
         assert "error:RuntimeError" in scenarios
 
     def test_context_and_callback_together(self) -> None:
@@ -431,10 +507,10 @@ class TestErrorContextIntegration:
             nonlocal callback_exc
             callback_exc = exc
 
-        with pytest.raises(SplurgeValidationError):
+        with pytest.raises(SplurgeValueError):
             with error_context(
                 exceptions={
-                    ValueError: (SplurgeValidationError, "invalid-value"),
+                    ValueError: (SplurgeValueError, "invalid-value"),
                 },
                 context={"field": "email"},
                 on_error=on_error,

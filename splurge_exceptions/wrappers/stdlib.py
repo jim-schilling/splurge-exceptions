@@ -67,9 +67,6 @@ def wrap_exception(
     if context:
         if isinstance(context, dict):
             wrapped.attach_context(context_dict=context)
-        else:
-            # Assume it's a single key-value pair
-            wrapped.attach_context(context_dict=context)
 
     # Add suggestions if provided
     if suggestions:

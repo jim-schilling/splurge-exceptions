@@ -1,5 +1,16 @@
 # Splurge Exceptions
 
+[![PyPI version](https://badge.fury.io/py/splurge-exceptions.svg)](https://pypi.org/project/splurge-exceptions/)
+[![Python versions](https://img.shields.io/pypi/pyversions/splurge-exceptions.svg)](https://pypi.org/project/splurge-exceptions/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+
+[![CI](https://github.com/jim-schilling/splurge-exceptions/actions/workflows/ci-quick-test.yml/badge.svg)](https://github.com/jim-schilling/splurge-exceptions/actions/workflows/ci-quick-test.yml)
+[![Coverage](https://img.shields.io/badge/coverage-94%25-brightgreen.svg)](https://github.com/jim-schilling/splurge-exceptions)
+[![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
+[![mypy](https://img.shields.io/badge/mypy-checked-black)](https://mypy-lang.org/)
+
+
+
 A comprehensive Python exception management library that provides structured error handling, exception wrapping, and intelligent error code management for modern applications.
 
 ## Quick Start
@@ -15,16 +26,16 @@ pip install splurge-exceptions
 #### 1. Wrap Exceptions
 
 ```python
-from splurge_exceptions import wrap_exception, SplurgeValidationError
+from splurge_exceptions import wrap_exception, SplurgeValueError
 
 try:
-    value = int("not a number")
+    age = int("not a number")
 except ValueError as e:
     error = wrap_exception(
         e,
-        SplurgeValidationError,
+        SplurgeValueError,
         error_code="invalid-value",
-        message="Could not parse input as integer",
+        message="Could not parse age as integer",
     )
     raise error
 ```
@@ -32,11 +43,11 @@ except ValueError as e:
 #### 2. Use Context Manager
 
 ```python
-from splurge_exceptions import error_context, SplurgeValidationError
+from splurge_exceptions import error_context, SplurgeValueError
 
 with error_context(
     exceptions={
-        ValueError: (SplurgeValidationError, "invalid-value"),
+        ValueError: (SplurgeValueError, "invalid-value"),
     },
     context={"field": "email"},
     suppress=False,
@@ -90,13 +101,13 @@ print(formatted)
 Splurge Exceptions provides 9 exception types for different error scenarios:
 
 - `SplurgeError` - Base exception class
-- `SplurgeValidationError` - Input validation errors
+- `SplurgeValueError` - Input validation errors
 - `SplurgeOSError` - Operating system errors
-- `SplurgeConfigurationError` - Configuration issues
 - `SplurgeRuntimeError` - Runtime execution errors
-- `SplurgeAuthenticationError` - Authentication failures
-- `SplurgeAuthorizationError` - Authorization failures
-- `SplurgeNotImplementedError` - Unimplemented features
+- `SplurgeTypeError` - Type errors
+- `SplurgeAttributeError` - Missing object attributes/methods
+- `SplurgeImportError` - Module import failures
+- `SplurgeLookupError` - Lookup errors
 - `SplurgeFrameworkError` - Framework-level errors
 
 ## Documentation

@@ -9,7 +9,7 @@ import pytest
 from splurge_exceptions import (
     SplurgeError,
     SplurgeOSError,
-    SplurgeValidationError,
+    SplurgeValueError,
 )
 from splurge_exceptions.wrappers.stdlib import wrap_exception
 
@@ -38,12 +38,12 @@ class TestWrapExceptionBasic:
         original = ValueError("Invalid value provided")
         wrapped = wrap_exception(
             original,
-            SplurgeValidationError,
+            SplurgeValueError,
             error_code="invalid-value",
             message="Value validation failed",
         )
 
-        assert isinstance(wrapped, SplurgeValidationError)
+        assert isinstance(wrapped, SplurgeValueError)
         assert wrapped.error_code == "invalid-value"
         assert wrapped.__cause__ is original
 
@@ -65,7 +65,7 @@ class TestWrapExceptionBasic:
         custom_msg = "Custom error message"
         wrapped = wrap_exception(
             original,
-            SplurgeValidationError,
+            SplurgeValueError,
             error_code="invalid-value",
             message=custom_msg,
         )
@@ -78,7 +78,7 @@ class TestWrapExceptionBasic:
         original = ValueError(original_msg)
         wrapped = wrap_exception(
             original,
-            SplurgeValidationError,
+            SplurgeValueError,
             error_code="invalid-value",
         )
 
@@ -107,7 +107,7 @@ class TestWrapExceptionWithContext:
         original = ValueError("Invalid value")
         wrapped = wrap_exception(
             original,
-            SplurgeValidationError,
+            SplurgeValueError,
             error_code="invalid-value",
             context={"field": "email", "value": "invalid@"},
         )
@@ -126,7 +126,7 @@ class TestWrapExceptionWithContext:
         }
         wrapped = wrap_exception(
             original,
-            SplurgeValidationError,
+            SplurgeValueError,
             error_code="invalid-value",
             context=context,
         )
@@ -139,7 +139,7 @@ class TestWrapExceptionWithContext:
         original = ValueError("Invalid")
         wrapped = wrap_exception(
             original,
-            SplurgeValidationError,
+            SplurgeValueError,
             error_code="invalid-value",
         )
 
@@ -171,7 +171,7 @@ class TestWrapExceptionWithSuggestions:
         original = ValueError("Invalid")
         wrapped = wrap_exception(
             original,
-            SplurgeValidationError,
+            SplurgeValueError,
             error_code="invalid-value",
         )
 
@@ -255,7 +255,7 @@ class TestWrapExceptionWithMultipleParameters:
 
         wrapped = wrap_exception(
             original,
-            SplurgeValidationError,
+            SplurgeValueError,
             error_code="invalid-email",
             message="Email validation failed",
             context=context,
@@ -319,19 +319,19 @@ class TestWrapExceptionEdgeCases:
         original = ValueError("")
         wrapped = wrap_exception(
             original,
-            SplurgeValidationError,
+            SplurgeValueError,
             error_code="invalid-value",
         )
 
         assert wrapped is not None
-        assert isinstance(wrapped, SplurgeValidationError)
+        assert isinstance(wrapped, SplurgeValueError)
 
     def test_wrap_exception_with_unicode_message(self) -> None:
         """Test wrapping exception with unicode characters."""
         original = ValueError("Error: 日本語 🚀")
         wrapped = wrap_exception(
             original,
-            SplurgeValidationError,
+            SplurgeValueError,
             error_code="invalid-value",
         )
 
@@ -342,7 +342,7 @@ class TestWrapExceptionEdgeCases:
         original = ValueError("Original")
         wrapped = wrap_exception(
             original,
-            SplurgeValidationError,
+            SplurgeValueError,
             error_code="invalid-value",
         )
 
@@ -383,7 +383,7 @@ class TestWrapExceptionIntegration:
 
         wrapped2 = wrap_exception(
             value_err,
-            SplurgeValidationError,
+            SplurgeValueError,
             error_code="invalid-value",
             context={"field": "age"},
         )
@@ -399,7 +399,7 @@ class TestWrapExceptionIntegration:
         original = ValueError("Invalid")
         wrapped = wrap_exception(
             original,
-            SplurgeValidationError,
+            SplurgeValueError,
             error_code="invalid-value",
         )
 
