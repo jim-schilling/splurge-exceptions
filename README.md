@@ -138,8 +138,8 @@ splurge-exceptions/
 
 The library includes comprehensive test coverage:
 
-- **168 tests** - Unit tests (100% passing)
-- **100% code coverage** - All public APIs tested
+- **229 tests** - Unit tests (100% passing)
+- **94% code coverage** - All public APIs tested
 - **MyPy strict mode** - Full type safety validation
 - **Ruff linting** - Code quality enforcement
 

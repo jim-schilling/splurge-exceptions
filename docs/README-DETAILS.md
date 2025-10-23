@@ -119,7 +119,7 @@ print(formatted_message)
 
 - **Type Safety**: Full MyPy strict mode compliance
 - **Code Quality**: Ruff linting with zero errors
-- **Testing**: 195+ tests with 100% coverage
+- **Testing**: 229+ tests with 94% coverage
 - **Property-Based Testing**: Hypothesis validation with 2,100+ scenarios
 - **Zero Dependencies**: No runtime dependencies for maximum compatibility
 
@@ -251,6 +251,20 @@ error.attach_context(context_dict={"field": "email", "value": "user@"})
 # Retrieve context
 user_id = error.get_context("user_id")
 all_context = error.get_all_context()
+
+**Context merge semantics:**
+
+- Attaching context is shallow-copy-like: when you pass a dict to
+    `attach_context(context_dict=...)` the current keys are copied but nested
+    mutable values are not deep-copied (i.e., attach is shallow).
+- When multiple contexts are composed (for example with nested
+    `error_context()` managers), key conflicts are resolved by replacement:
+    the inner/most-recent context value replaces the outer one. If both the
+    outer and inner values for the same key are dictionaries, the inner
+    dictionary completely replaces the outer dictionary (no deep merge).
+
+This behavior is deliberate: it produces predictable, easy-to-understand
+conflict resolution (inner wins) and avoids surprising deep-merge rules.
 ```
 
 ### Recovery Suggestions

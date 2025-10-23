@@ -67,7 +67,7 @@ markers = [
 
 [tool.hypothesis]
 # Hypothesis configuration for property-based testing
-max_examples = 150
+max_examples = 500
 deadline = 5000  # 5 seconds per test
 suppress_health_check = ["too_slow"]
 verbosity = "normal"

@@ -110,7 +110,9 @@ def test_unicode_and_long_strings_in_codes_messages_and_context(
         # contains a dot
         st.builds(lambda a, b: f"{a}.{b}", st.text(min_size=1, max_size=10), st.text(min_size=0, max_size=10)),
         # starts with a digit
-        st.builds(lambda d, rest: f"{d}{rest}", st.sampled_from([str(i) for i in range(10)]), st.text(min_size=0, max_size=20)),
+        st.builds(
+            lambda d, rest: f"{d}{rest}", st.sampled_from([str(i) for i in range(10)]), st.text(min_size=0, max_size=20)
+        ),
     )
 )
 def test_invalid_error_codes_raise_value_error(bad: str) -> None:
