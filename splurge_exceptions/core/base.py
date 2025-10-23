@@ -408,3 +408,31 @@ class SplurgeError(Exception):
             Formatted error message.
         """
         return self.get_full_message()
+
+    def __reduce__(self):
+        """Support pickling by providing constructor args and state.
+
+        The default Exception pickling uses the instance args (which are the
+        formatted message). SplurgeError requires structured constructor
+        arguments (error_code, message, details, severity, recoverable), so
+        implement __reduce__ to ensure correct round-trip and preserve
+        context/suggestions.
+        """
+        state = {"_context": self._context, "_suggestions": self._suggestions}
+        return (
+            self.__class__,
+            (self._error_code, self._message, self._details, self._severity, self._recoverable),
+            state,
+        )
+
+    def __setstate__(self, state: dict | None) -> None:
+        """Restore pickled state (context and suggestions)."""
+        if not state:
+            return
+
+        ctx = state.get("_context")
+        if isinstance(ctx, dict):
+            self._context = ctx.copy()
+        sugg = state.get("_suggestions")
+        if isinstance(sugg, list):
+            self._suggestions = list(sugg)
