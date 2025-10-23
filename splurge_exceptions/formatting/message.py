@@ -72,7 +72,16 @@ class ErrorMessageFormatter:
 
         lines: list[str] = []
         for key, value in context.items():
-            lines.append(f"  {key}: {value}")
+            # Safely format values: protect against objects whose __str__/__repr__ raise
+            try:
+                value_str = str(value)
+            except Exception:
+                try:
+                    value_str = repr(value)
+                except Exception:
+                    value_str = "<unrepresentable object>"
+
+            lines.append(f"  {key}: {value_str}")
 
         return "\n".join(lines)
 

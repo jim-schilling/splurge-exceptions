@@ -12,6 +12,7 @@ These complement the existing `test_core_properties_hypothesis.py` suite.
 from __future__ import annotations
 
 import pickle
+import re
 from typing import Any
 
 from hypothesis import given
@@ -84,14 +85,10 @@ def test_unicode_and_long_strings_in_codes_messages_and_context(
     """
 
     # create a valid code falling back to a safe value if validation would fail
-    safe_code = (
-        code
-        if code
-        and len(code) >= 2
-        and code[0].islower()
-        and all(c.islower() or c.isdigit() or c == "-" for c in code)
-        else "unicode-test"
-    )
+    if code and re.fullmatch(r"[a-z][a-z0-9-]{0,18}[a-z0-9]", code):
+        safe_code = code
+    else:
+        safe_code = "unicode-test"
 
     exc = SplurgeValueError(error_code=safe_code, message=message)
 
@@ -106,7 +103,16 @@ def test_unicode_and_long_strings_in_codes_messages_and_context(
         assert message in rendered
 
 
-@given(bad=st.text().filter(lambda s: (" " in s) or ("." in s) or s[:1].isdigit()))
+@given(
+    bad=st.one_of(
+        # contains a space
+        st.builds(lambda a, b: f"{a} {b}", st.text(min_size=1, max_size=10), st.text(min_size=0, max_size=10)),
+        # contains a dot
+        st.builds(lambda a, b: f"{a}.{b}", st.text(min_size=1, max_size=10), st.text(min_size=0, max_size=10)),
+        # starts with a digit
+        st.builds(lambda d, rest: f"{d}{rest}", st.sampled_from([str(i) for i in range(10)]), st.text(min_size=0, max_size=20)),
+    )
+)
 def test_invalid_error_codes_raise_value_error(bad: str) -> None:
     """User-supplied invalid error_code values should raise ValueError on construction."""
 
