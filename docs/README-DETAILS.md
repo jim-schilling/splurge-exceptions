@@ -36,6 +36,8 @@ Splurge Exceptions provides 6 specialized exception classes, each with its own d
 | `SplurgeLookupError` | `lookup` | Lookup and search failures |
 | `SplurgeRuntimeError` | `runtime` | Runtime execution errors |
 | `SplurgeTypeError` | `type` | Type validation and conversion errors |
+| `SplurgeAttributeError` | `attribute` | Attribute access and existence errors |
+| `SplurgeImportError` | `import` | Module and import-related errors |
 | `SplurgeFrameworkError` | `framework` | Framework-level errors and extensions |
 
 ### Exception Features
@@ -45,7 +47,6 @@ Splurge Exceptions provides 6 specialized exception classes, each with its own d
 - **Context Attachment**: Add operation context, user data, timestamps
 - **Recovery Suggestions**: Provide actionable error resolution guidance
 - **Severity Levels**: Info, warning, error, critical classifications
-- **Recoverability Flags**: Mark errors as recoverable or not
 - **Exception Chaining**: Preserve original exception context via `__cause__`
 
 ### Exception Management Tools

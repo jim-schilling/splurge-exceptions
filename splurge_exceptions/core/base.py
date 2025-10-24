@@ -37,7 +37,6 @@ class SplurgeError(Exception):
         message: Human-readable error message
         details: Additional error details/context
         severity: Error severity level (info, warning, error, critical)
-        recoverable: Whether error is recoverable
 
     Example:
         >>> class SplurgeSqlQueryError(SplurgeError):
@@ -63,11 +62,11 @@ class SplurgeError(Exception):
 
     def __init__(
         self,
-        error_code: str,
+        error_code: str = "generic",
+        *,
         message: str | None = None,
         details: dict[str, Any] | None = None,
         severity: str = "error",
-        recoverable: bool = False,
     ) -> None:
         """Initialize SplurgeError.
 
@@ -76,7 +75,6 @@ class SplurgeError(Exception):
             message: Human-readable error message
             details: Additional error details/context
             severity: Error severity level (info, warning, error, critical)
-            recoverable: Whether error is recoverable
 
         Raises:
             TypeError: If _domain is not defined on the class
@@ -100,7 +98,6 @@ class SplurgeError(Exception):
         self._message = message
         self._details = details or {}
         self._severity = severity
-        self._recoverable = recoverable
         self._context: dict[str, Any] = {}
         self._suggestions: list[str] = []
 
@@ -225,23 +222,6 @@ class SplurgeError(Exception):
             One of: info, warning, error, critical.
         """
         return self._severity
-
-    @property
-    def recoverable(self) -> bool:
-        """Check if error is recoverable.
-
-        Returns:
-            True if error is recoverable, False otherwise.
-        """
-        return self._recoverable
-
-    def is_recoverable(self) -> bool:
-        """Check if error is recoverable.
-
-        Returns:
-            True if error is recoverable, False otherwise.
-        """
-        return self._recoverable
 
     def get_full_message(self) -> str:
         """Get full message including code, message, and details.
@@ -396,9 +376,6 @@ class SplurgeError(Exception):
 
         args.append(f"severity={self._severity!r}")
 
-        if self._recoverable:
-            args.append(f"recoverable={self._recoverable}")
-
         return f"{self.__class__.__name__}({', '.join(args)})"
 
     def __str__(self) -> str:
@@ -414,22 +391,43 @@ class SplurgeError(Exception):
 
         The default Exception pickling uses the instance args (which are the
         formatted message). SplurgeError requires structured constructor
-        arguments (error_code, message, details, severity, recoverable), so
-        implement __reduce__ to ensure correct round-trip and preserve
-        context/suggestions.
+        arguments (error_code, message, details, severity), so implement
+        __reduce__ to ensure correct round-trip and preserve context/suggestions.
+
+        Returns a tuple of (callable, args, state) where:
+        - callable: The class constructor
+        - args: A tuple with only error_code as positional argument
+        - state: A dict with remaining kwargs and instance state to be restored
         """
-        state = {"_context": self._context, "_suggestions": self._suggestions}
+        state = {
+            "message": self._message,
+            "details": self._details,
+            "severity": self._severity,
+            "_context": self._context,
+            "_suggestions": self._suggestions,
+        }
         return (
             self.__class__,
-            (self._error_code, self._message, self._details, self._severity, self._recoverable),
+            (self._error_code,),
             state,
         )
 
     def __setstate__(self, state: dict | None) -> None:
-        """Restore pickled state (context and suggestions)."""
+        """Restore pickled state (keyword arguments and instance state)."""
         if not state:
             return
 
+        # Restore keyword arguments from the state
+        message = state.get("message")
+        details = state.get("details", {})
+        severity = state.get("severity", "error")
+
+        # Update instance with these values
+        self._message = message
+        self._details = details if isinstance(details, dict) else {}
+        self._severity = severity
+
+        # Restore context and suggestions
         ctx = state.get("_context")
         if isinstance(ctx, dict):
             self._context = ctx.copy()

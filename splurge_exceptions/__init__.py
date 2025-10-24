@@ -22,7 +22,7 @@ from splurge_exceptions.formatting.message import ErrorMessageFormatter
 from splurge_exceptions.managers.exception import error_context
 from splurge_exceptions.wrappers.stdlib import wrap_exception
 
-__version__ = "2025.0.0"
+__version__ = "2025.0.1"
 __domains__ = ["exceptions", "errors", "handlers"]
 
 __all__ = [

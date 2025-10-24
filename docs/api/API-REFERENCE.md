@@ -27,11 +27,11 @@ class SplurgeError(Exception):
     
     def __init__(
         self,
-        error_code: str,
+        error_code: str = "generic",
+        *,
         message: str | None = None,
         details: dict[str, Any] | None = None,
         severity: str = "error",
-        recoverable: bool = False,
     ) -> None:
         """Initialize Splurge exception.
         
@@ -45,8 +45,6 @@ class SplurgeError(Exception):
             severity: Error severity level
                      Options: "info", "warning", "error", "critical"
                      Default: "error"
-            recoverable: Whether error can be recovered from
-                        Default: False
         
         Raises:
             TypeError: If _domain is not defined on the class
@@ -102,11 +100,6 @@ class SplurgeError(Exception):
     @property
     def severity(self) -> str:
         """Get the severity level."""
-        ...
-    
-    @property
-    def is_recoverable(self) -> bool:
-        """Check if error is recoverable."""
         ...
     
     def attach_context(
@@ -399,7 +392,8 @@ Convert any exception to a Splurge exception.
 def wrap_exception(
     exception: BaseException,
     target_exception_type: type[SplurgeError],
-    error_code: str,
+    *,
+    error_code: str = "generic",
     message: str | None = None,
     context: dict[str, Any] | None = None,
     suggestions: list[str] | None = None,
@@ -446,8 +440,7 @@ def wrap_exception(
         - Supports custom messages
     
     Note:
-        error_code is REQUIRED. The registry-based resolution was removed
-        in version 2025.0.0. Users must provide explicit error codes.
+        error_code is REQUIRED.
     """
     ...
 ```

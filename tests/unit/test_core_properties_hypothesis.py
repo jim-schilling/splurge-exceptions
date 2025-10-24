@@ -93,14 +93,6 @@ class TestSplurgeErrorCoreProperties:
         error = SplurgeValueError(error_code=error_code, severity=severity)
         assert error.severity == severity
 
-    @given(valid_error_codes(), st.booleans())
-    def test_recoverable_flag_preserved(self, error_code: str, recoverable: bool) -> None:
-        """Property: Recoverable flag is always preserved."""
-        error = SplurgeValueError(error_code=error_code, recoverable=recoverable)
-        assert error._recoverable == recoverable
-        assert error.recoverable == recoverable
-        assert error.is_recoverable() == recoverable
-
     @given(valid_error_codes(), st.dictionaries(st.text(min_size=1, max_size=30), st.text(max_size=100), max_size=10))
     def test_details_preserved(self, error_code: str, details: dict[str, str]) -> None:
         """Property: Details dictionary is always preserved."""
