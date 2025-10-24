@@ -12,7 +12,8 @@ from splurge_exceptions import SplurgeError
 def wrap_exception(
     exception: BaseException,
     target_exception_type: type[SplurgeError],
-    error_code: str,
+    *,
+    error_code: str = "generic",
     message: str | None = None,
     context: dict[str, Any] | None = None,
     suggestions: list[str] | None = None,

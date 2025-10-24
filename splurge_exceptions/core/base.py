@@ -63,7 +63,8 @@ class SplurgeError(Exception):
 
     def __init__(
         self,
-        error_code: str,
+        error_code: str = "generic",
+        *,
         message: str | None = None,
         details: dict[str, Any] | None = None,
         severity: str = "error",
@@ -417,19 +418,44 @@ class SplurgeError(Exception):
         arguments (error_code, message, details, severity, recoverable), so
         implement __reduce__ to ensure correct round-trip and preserve
         context/suggestions.
+
+        Returns a tuple of (callable, args, state) where:
+        - callable: The class constructor
+        - args: A tuple with only error_code as positional argument
+        - state: A dict with remaining kwargs and instance state to be restored
         """
-        state = {"_context": self._context, "_suggestions": self._suggestions}
+        state = {
+            "message": self._message,
+            "details": self._details,
+            "severity": self._severity,
+            "recoverable": self._recoverable,
+            "_context": self._context,
+            "_suggestions": self._suggestions,
+        }
         return (
             self.__class__,
-            (self._error_code, self._message, self._details, self._severity, self._recoverable),
+            (self._error_code,),
             state,
         )
 
     def __setstate__(self, state: dict | None) -> None:
-        """Restore pickled state (context and suggestions)."""
+        """Restore pickled state (keyword arguments and instance state)."""
         if not state:
             return
 
+        # Restore keyword arguments from the state
+        message = state.get("message")
+        details = state.get("details", {})
+        severity = state.get("severity", "error")
+        recoverable = state.get("recoverable", False)
+
+        # Update instance with these values
+        self._message = message
+        self._details = details if isinstance(details, dict) else {}
+        self._severity = severity
+        self._recoverable = recoverable
+
+        # Restore context and suggestions
         ctx = state.get("_context")
         if isinstance(ctx, dict):
             self._context = ctx.copy()

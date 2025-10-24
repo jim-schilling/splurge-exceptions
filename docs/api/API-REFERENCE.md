@@ -27,7 +27,8 @@ class SplurgeError(Exception):
     
     def __init__(
         self,
-        error_code: str,
+        error_code: str = "generic",
+        *,
         message: str | None = None,
         details: dict[str, Any] | None = None,
         severity: str = "error",
@@ -399,7 +400,8 @@ Convert any exception to a Splurge exception.
 def wrap_exception(
     exception: BaseException,
     target_exception_type: type[SplurgeError],
-    error_code: str,
+    *,
+    error_code: str = "generic",
     message: str | None = None,
     context: dict[str, Any] | None = None,
     suggestions: list[str] | None = None,
@@ -446,8 +448,7 @@ def wrap_exception(
         - Supports custom messages
     
     Note:
-        error_code is REQUIRED. The registry-based resolution was removed
-        in version 2025.0.0. Users must provide explicit error codes.
+        error_code is REQUIRED.
     """
     ...
 ```

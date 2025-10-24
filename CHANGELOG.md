@@ -5,6 +5,13 @@ All notable changes to Splurge Exceptions will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Calendar Versioning](https://calver.org/).
 
+## [2025.0.1] - 2025-10-24
+
+### Changed
+- `SplurgeError` signature updated to have `error_code` as a positional parameter with a default value = "generic".
+- `SplurgeError` constructor signature updated to keyword-only arguments after `error_code`.
+- `wrap_exception` function signature update to keyword-only arguments after `target_exception_type`, with `error_code` having a default value = "generic".
+- Updated all relevant documentation (API reference, detailed README) to reflect these signature changes.
 
 ## [2025.0.0] - 2025-10-23
 
