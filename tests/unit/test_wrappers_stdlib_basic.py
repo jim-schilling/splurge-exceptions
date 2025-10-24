@@ -307,8 +307,9 @@ class TestWrapExceptionSeverityAndRecoverability:
             error_code="file-not-found",
         )
 
-        # Default recoverability should be set
-        assert isinstance(wrapped.recoverable, bool)
+        # Check wrapped exception properties
+        assert isinstance(wrapped.error_code, str)
+        assert wrapped.error_code == "file-not-found"
 
 
 class TestWrapExceptionEdgeCases:

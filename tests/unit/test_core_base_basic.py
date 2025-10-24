@@ -33,14 +33,12 @@ class TestSplurgeErrorInstantiation:
             message="Test error",
             details=details,
             severity="error",
-            recoverable=True,
         )
 
         assert error.error_code == "test-error"
         assert error.message == "Test error"
         assert error.details == details
         assert error.severity == "error"
-        assert error.recoverable is True
 
     def test_instantiation_with_default_values(self) -> None:
         """Test instantiation with default values."""
@@ -50,7 +48,6 @@ class TestSplurgeErrorInstantiation:
         assert error.message is None
         assert error.details == {}
         assert error.severity == "error"
-        assert error.recoverable is False
 
     def test_invalid_severity_raises_error(self) -> None:
         """Test that invalid severity raises ValueError."""
@@ -281,23 +278,6 @@ class TestSuggestionManagement:
         error.add_suggestion("Third")
 
         assert error.get_suggestions() == ["First", "Second", "Third"]
-
-
-class TestRecoverability:
-    """Test recoverability-related methods."""
-
-    def test_recoverable_property(self) -> None:
-        """Test recoverable property."""
-        error = DummyException(error_code="test-error", recoverable=True)
-        assert error.recoverable is True
-
-    def test_is_recoverable_method(self) -> None:
-        """Test is_recoverable method."""
-        error = DummyException(error_code="test-error", recoverable=True)
-        assert error.is_recoverable() is True
-
-        error2 = DummyException(error_code="test-error", recoverable=False)
-        assert error2.is_recoverable() is False
 
 
 class DummyExceptionChaining:

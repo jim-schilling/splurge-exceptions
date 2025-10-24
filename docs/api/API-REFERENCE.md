@@ -32,7 +32,6 @@ class SplurgeError(Exception):
         message: str | None = None,
         details: dict[str, Any] | None = None,
         severity: str = "error",
-        recoverable: bool = False,
     ) -> None:
         """Initialize Splurge exception.
         
@@ -46,8 +45,6 @@ class SplurgeError(Exception):
             severity: Error severity level
                      Options: "info", "warning", "error", "critical"
                      Default: "error"
-            recoverable: Whether error can be recovered from
-                        Default: False
         
         Raises:
             TypeError: If _domain is not defined on the class
@@ -103,11 +100,6 @@ class SplurgeError(Exception):
     @property
     def severity(self) -> str:
         """Get the severity level."""
-        ...
-    
-    @property
-    def is_recoverable(self) -> bool:
-        """Check if error is recoverable."""
         ...
     
     def attach_context(

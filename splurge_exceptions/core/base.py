@@ -37,7 +37,6 @@ class SplurgeError(Exception):
         message: Human-readable error message
         details: Additional error details/context
         severity: Error severity level (info, warning, error, critical)
-        recoverable: Whether error is recoverable
 
     Example:
         >>> class SplurgeSqlQueryError(SplurgeError):
@@ -68,7 +67,6 @@ class SplurgeError(Exception):
         message: str | None = None,
         details: dict[str, Any] | None = None,
         severity: str = "error",
-        recoverable: bool = False,
     ) -> None:
         """Initialize SplurgeError.
 
@@ -77,7 +75,6 @@ class SplurgeError(Exception):
             message: Human-readable error message
             details: Additional error details/context
             severity: Error severity level (info, warning, error, critical)
-            recoverable: Whether error is recoverable
 
         Raises:
             TypeError: If _domain is not defined on the class
@@ -101,7 +98,6 @@ class SplurgeError(Exception):
         self._message = message
         self._details = details or {}
         self._severity = severity
-        self._recoverable = recoverable
         self._context: dict[str, Any] = {}
         self._suggestions: list[str] = []
 
@@ -226,23 +222,6 @@ class SplurgeError(Exception):
             One of: info, warning, error, critical.
         """
         return self._severity
-
-    @property
-    def recoverable(self) -> bool:
-        """Check if error is recoverable.
-
-        Returns:
-            True if error is recoverable, False otherwise.
-        """
-        return self._recoverable
-
-    def is_recoverable(self) -> bool:
-        """Check if error is recoverable.
-
-        Returns:
-            True if error is recoverable, False otherwise.
-        """
-        return self._recoverable
 
     def get_full_message(self) -> str:
         """Get full message including code, message, and details.
@@ -397,9 +376,6 @@ class SplurgeError(Exception):
 
         args.append(f"severity={self._severity!r}")
 
-        if self._recoverable:
-            args.append(f"recoverable={self._recoverable}")
-
         return f"{self.__class__.__name__}({', '.join(args)})"
 
     def __str__(self) -> str:
@@ -415,9 +391,8 @@ class SplurgeError(Exception):
 
         The default Exception pickling uses the instance args (which are the
         formatted message). SplurgeError requires structured constructor
-        arguments (error_code, message, details, severity, recoverable), so
-        implement __reduce__ to ensure correct round-trip and preserve
-        context/suggestions.
+        arguments (error_code, message, details, severity), so implement
+        __reduce__ to ensure correct round-trip and preserve context/suggestions.
 
         Returns a tuple of (callable, args, state) where:
         - callable: The class constructor
@@ -428,7 +403,6 @@ class SplurgeError(Exception):
             "message": self._message,
             "details": self._details,
             "severity": self._severity,
-            "recoverable": self._recoverable,
             "_context": self._context,
             "_suggestions": self._suggestions,
         }
@@ -447,13 +421,11 @@ class SplurgeError(Exception):
         message = state.get("message")
         details = state.get("details", {})
         severity = state.get("severity", "error")
-        recoverable = state.get("recoverable", False)
 
         # Update instance with these values
         self._message = message
         self._details = details if isinstance(details, dict) else {}
         self._severity = severity
-        self._recoverable = recoverable
 
         # Restore context and suggestions
         ctx = state.get("_context")
