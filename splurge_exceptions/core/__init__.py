@@ -8,7 +8,7 @@ Examples:
 
     from splurge_exceptions.core import SplurgeValueError
 
-    raise SplurgeValueError(error_code="invalid", message="Invalid input")
+    raise SplurgeValueError("Invalid input", error_code="invalid")
 
 """
 

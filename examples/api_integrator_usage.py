@@ -169,18 +169,18 @@ class DatabaseClient:
             error: SplurgeError
             if isinstance(e, ConnectionError):
                 error = SplurgeConnectionError(
+                    str(e),
                     error_code="connection-refused",
-                    message=str(e),
                 )
             elif isinstance(e, TimeoutError):
                 error = SplurgeConnectionError(
+                    str(e),
                     error_code="connection-timeout",
-                    message=str(e),
                 )
             else:  # ValueError
                 error = SplurgeSqlError(
+                    str(e),
                     error_code="invalid-connection-string",
-                    message=str(e),
                 )
             raise error from e
 
@@ -196,11 +196,11 @@ class DatabaseClient:
         """
         try:
             if not self.connection:
-                raise SplurgeConnectionError(error_code="not-connected", message="No active database connection")
+                raise SplurgeConnectionError("No active database connection", error_code="not-connected")
 
             # SQL validation - raise domain-specific exceptions directly
             if not query.strip():
-                raise SplurgeSqlError(error_code="empty-query", message="Query cannot be empty")
+                raise SplurgeSqlError("Query cannot be empty", error_code="empty-query")
 
             # Check for dangerous operations
             dangerous_patterns = [
@@ -212,8 +212,8 @@ class DatabaseClient:
             for pattern in dangerous_patterns:
                 if re.search(pattern, query, re.IGNORECASE):
                     raise SplurgeSqlError(
+                        "Dangerous SQL operation detected",
                         error_code="dangerous-operation",
-                        message="Dangerous SQL operation detected",
                         details={"pattern": pattern, "query": query},
                     )
 
@@ -230,13 +230,13 @@ class DatabaseClient:
             error: SplurgeError
             if isinstance(e, ValueError):
                 error = SplurgeSqlError(
+                    str(e),
                     error_code="execution-syntax-error",
-                    message=str(e),
                 )
             else:  # RuntimeError
                 error = SplurgeQueryError(
+                    str(e),
                     error_code="execution-failed",
-                    message=str(e),
                 )
             raise error from e
 
@@ -250,7 +250,7 @@ class DatabaseClient:
             List of query results
         """
         if not self.connection:
-            raise SplurgeConnectionError(error_code="not-connected", message="No active database connection")
+            raise SplurgeConnectionError("No active database connection", error_code="not-connected")
 
         results = []
 
@@ -269,13 +269,13 @@ class DatabaseClient:
                 error: SplurgeError
                 if isinstance(e, ValueError):
                     error = SplurgeSqlError(
+                        str(e),
                         error_code="invalid-syntax",
-                        message=str(e),
                     )
                 else:  # RuntimeError
                     error = SplurgeQueryError(
+                        str(e),
                         error_code="execution-failed",
-                        message=str(e),
                     )
                 error.attach_context(
                     batch_index=i,
@@ -325,8 +325,8 @@ class DataProcessor:
         for field in required_fields:
             if field not in data:
                 raise SplurgeValidationError(
+                    f"Required field '{field}' is missing",
                     error_code="missing-required-field",
-                    message=f"Required field '{field}' is missing",
                     details={"field": field, "schema": schema},
                 )
 
@@ -337,8 +337,8 @@ class DataProcessor:
                 expected_type = properties[field].get("type")
                 if expected_type and not isinstance(value, self._get_type_class(expected_type)):
                     raise SplurgeValidationError(
+                        f"Field '{field}' should be of type '{expected_type}'",
                         error_code="type-mismatch",
-                        message=f"Field '{field}' should be of type '{expected_type}'",
                         details={"field": field, "expected": expected_type, "actual": type(value).__name__},
                     )
 
@@ -374,35 +374,35 @@ class DataProcessor:
                     data = json.loads(content)
                 except json.JSONDecodeError as e:
                     error = SplurgeFormatError(
+                        str(e),
                         error_code="json-parse-error",
-                        message=str(e),
                     )
                     raise error from e
                 except UnicodeDecodeError as e:
                     error = SplurgeEncodingError(
+                        str(e),
                         error_code="encoding-error",
-                        message=str(e),
                     )
                     raise error from e
                 except ValueError as e:
                     error = SplurgeValidationError(
+                        str(e),
                         error_code="validation-error",
-                        message=str(e),
                     )
                     raise error from e
 
                 # Validate structure
                 if not isinstance(data, dict):
                     raise SplurgeValidationError(
+                        "JSON root must be an object",
                         error_code="invalid-json-structure",
-                        message="JSON root must be an object",
                         details={"actual_type": type(data).__name__},
                     )
 
                 return data
 
         except FileNotFoundError as e:
-            error = SplurgeOSError(error_code="file-not-found", message=f"File not found: {file_path}")
+            error = SplurgeOSError(f"File not found: {file_path}", error_code="file-not-found")
             error.attach_context({"file_path": file_path})
             raise error from e
 
@@ -418,14 +418,15 @@ class DataProcessor:
         """
         lines = csv_content.strip().split("\n")
         if not lines:
-            raise SplurgeFormatError(error_code="empty-csv", message="CSV content cannot be empty")
+            raise SplurgeFormatError("CSV content cannot be empty", error_code="empty-csv")
 
         # Parse header
         try:
             header = [field.strip() for field in lines[0].split(delimiter)]
         except Exception as e:
             error = SplurgeFormatError(
-                error_code="invalid-csv-header", message=f"Failed to parse CSV header with delimiter '{delimiter}'"
+                f"Failed to parse CSV header with delimiter '{delimiter}'",
+                error_code="invalid-csv-header"
             )
             error.attach_context({"delimiter": delimiter})
             raise error from e
@@ -444,8 +445,8 @@ class DataProcessor:
 
                 if len(values) != len(header):
                     raise SplurgeFormatError(
+                        f"Row has {len(values)} fields, expected {len(header)}",
                         error_code="field-count-mismatch",
-                        message=f"Row has {len(values)} fields, expected {len(header)}",
                         details={"row": i, "expected": len(header), "actual": len(values)},
                     )
 
@@ -456,13 +457,13 @@ class DataProcessor:
                 error: SplurgeError
                 if isinstance(e, ValueError):
                     error = SplurgeFormatError(
+                        str(e),
                         error_code="invalid-csv-row",
-                        message=str(e),
                     )
                 else:  # IndexError
                     error = SplurgeFormatError(
+                        str(e),
                         error_code="csv-field-mismatch",
-                        message=str(e),
                     )
                 error.attach_context(row_number=i, line=line[:50])
                 handle_row_error(error)
@@ -626,8 +627,8 @@ def demonstrate_error_context_and_suggestions():
     try:
         raise (
             SplurgeSqlError(
-                error_code="dangerous-operation",
                 message="Dangerous SQL operation detected",
+                error_code="dangerous-operation",
                 details={"operation": "DROP TABLE", "table": "users"},
             )
             .attach_context("user_id", "admin")

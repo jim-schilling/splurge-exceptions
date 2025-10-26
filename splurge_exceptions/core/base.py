@@ -12,7 +12,7 @@ Example:
     class SplurgeSqlError(SplurgeError):
         _domain = "splurge.sql"
 
-    err = SplurgeSqlError(error_code="invalid-column", message="Missing column")
+    err = SplurgeSqlError("Missing column", error_code="invalid-column")
     print(err.full_code)  # -> "splurge.sql.invalid-column"
 
 """

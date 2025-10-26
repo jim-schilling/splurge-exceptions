@@ -63,8 +63,8 @@ try:
 except ValueError as e:
     # Wrap the exception with explicit try/except
     wrapped = SplurgeValueError(
+        "Could not parse input as integer",
         error_code="invalid-integer",
-        message="Could not parse input as integer",
         details={"input": "invalid", "expected_type": "int"}
     )
     wrapped.attach_context({
@@ -114,8 +114,8 @@ from splurge_exceptions import SplurgeValueError
 
 # Create a structured exception
 error = SplurgeValueError(
+    "Email address format is invalid",
     error_code="invalid-email",
-    message="Email address format is invalid",
     details={"provided": "user@", "domain": "example.com"}
 )
 
@@ -138,8 +138,8 @@ try:
 except ValueError as original_error:
     # Create structured exception and chain original
     structured_error = SplurgeValueError(
-        error_code="user-validation-failed",
-        message="User validation failed"
+        "User validation failed",
+        error_code="user-validation-failed"
     )
     structured_error.attach_context({
         "operation": "user_registration"
@@ -190,7 +190,7 @@ domain.semantic-error-code
 All Splurge exceptions support rich context attachment:
 
 ```python
-error = SplurgeValueError(error_code="validation-failed")
+error = SplurgeValueError("Validation failed", error_code="validation-failed")
 
 # Attach different types of context
 error.attach_context("user_id", 12345)
@@ -222,7 +222,7 @@ conflict resolution (inner wins) and avoids surprising deep-merge rules.
 Provide actionable guidance for error resolution:
 
 ```python
-error = SplurgeOSError(error_code="file-not-found")
+error = SplurgeOSError("File not found", error_code="file-not-found")
 
 error.add_suggestion("Verify the file path exists")
 error.add_suggestion("Check file permissions")
@@ -278,8 +278,8 @@ except SplurgeOSError as e:
 # Raise built-in types for simple cases
 if not user_email:
     raise SplurgeValueError(
+        "Email is required",
         error_code="required-field",
-        message="Email is required",
         details={"field": "email"}
     )
 ```
@@ -323,16 +323,16 @@ class FileService:
                 return json.load(f)
         except FileNotFoundError as e:
             error = SplurgeSafeIoRuntimeError(
-                error_code="config-not-found",
-                message=f"Configuration file not found: {path}"
+                f"Configuration file not found: {path}",
+                error_code="config-not-found"
             )
             error.__cause__ = e
             error.attach_context({"path": path})
             raise error
         except json.JSONDecodeError as e:
             error = SplurgeSafeIoValidationError(
-                error_code="invalid-json",
-                message=f"Configuration file contains invalid JSON"
+                "Configuration file contains invalid JSON",
+                error_code="invalid-json"
             )
             error.__cause__ = e
             error.attach_context({"path": path})
@@ -399,14 +399,14 @@ class DatabaseClient:
     def connect(self, connection_string: str):
         if not connection_string:
             raise MyLibraryValidationError(
-                error_code="empty-connection-string",
-                message="Connection string cannot be empty"
+                "Connection string cannot be empty",
+                error_code="empty-connection-string"
             )
 
         if "invalid" in connection_string:
             raise MyLibraryConnectionError(
+                "Connection string format is invalid",
                 error_code="invalid-connection-format",
-                message="Connection string format is invalid",
                 details={"provided": connection_string}
             )
 
@@ -416,8 +416,8 @@ class DatabaseClient:
     def query(self, sql: str, params=None):
         if not self.connection:
             raise MyLibraryConnectionError(
-                error_code="not-connected",
-                message="No active database connection"
+                "No active database connection",
+                error_code="not-connected"
             )
 
         try:
@@ -426,6 +426,7 @@ class DatabaseClient:
             raise wrap_exception(
                 e,
                 MyLibraryConnectionError,
+                "Query execution timed out",
                 error_code="query-timeout",
                 context={"sql": sql, "timeout": "30s"}
             ) from e
@@ -443,6 +444,7 @@ class APIService:
             auth_error = wrap_exception(
                 e,
                 MyLibraryValidationError,
+                "Authentication token invalid or expired",
                 error_code="invalid-auth-token",
                 context={"token_prefix": token[:10] + "..."}
             )

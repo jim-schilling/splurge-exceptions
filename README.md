@@ -30,8 +30,8 @@ from splurge_exceptions import SplurgeValueError
 
 # Create a semantic exception with context
 error = SplurgeValueError(
+    "Email address format is invalid",
     error_code="invalid-email",
-    message="Email address format is invalid",
     details={"provided": "user@", "expected": "user@domain.com"}
 )
 
@@ -55,8 +55,8 @@ try:
 except ValueError as e:
     # Wrap the exception with structured error
     wrapped = SplurgeValueError(
+        "Could not parse input as integer",
         error_code="invalid-integer",
-        message="Could not parse input as integer",
         details={"input": "invalid"}
     )
     raise wrapped from e
@@ -87,8 +87,8 @@ class SplurgeSafeIoRuntimeError(SplurgeSafeIoError):
     _domain = "splurge-safe-io.runtime"
 
 raise SplurgeSafeIoRuntimeError(
+    "Unexpected error occurred",
     error_code="unexpected",
-    message="Unexpected error occurred",
 )
 # Resulting full error code: "splurge-safe-io.runtime.unexpected"
 ```

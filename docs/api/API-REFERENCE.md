@@ -24,31 +24,27 @@ class SplurgeError(Exception):
     
     def __init__(
         self,
-        error_code: str,
-        *,
-        message: str | None = None,
+        message: str,
+        error_code: str | None = None,
         details: dict[str, Any] | None = None,
     ) -> None:
         """Initialize Splurge exception.
         
         Args:
-            error_code: User-defined semantic error identifier
+            message: Human-readable error message (required)
+            error_code: User-defined semantic error identifier (optional)
                        (e.g., "invalid-value", "timeout", "file-not-found")
-                       Must match pattern: [a-z][a-z0-9-]*[a-z0-9]
+                       If provided, must match pattern: [a-z][a-z0-9-]*[a-z0-9]
                        NO dots allowed in error codes.
-            message: Human-readable error message
+                       Invalid codes are normalized automatically (no validation error).
             details: Additional error details/context dictionary
-        
-        Raises:
-            SplurgeSubclassError: If _domain is not defined or if error_code/_domain
-                don't match required patterns.
         
         Example:
             >>> class MyError(SplurgeError):
             ...     _domain = "custom.module"
             >>> error = MyError(
+            ...     "Configuration is invalid",
             ...     error_code="invalid-config",
-            ...     message="Configuration is invalid",
             ...     details={"config_key": "database_url"},
             ... )
             >>> print(error.full_code)
@@ -200,7 +196,7 @@ class SplurgeSubclassError(Exception):
             pass  # Missing _domain!
 
         try:
-            BrokenError(error_code="test")
+            BrokenError("Error message", error_code="test")
         except SplurgeSubclassError as e:
             print(f"Exception definition error: {e}")
     """
@@ -224,7 +220,7 @@ try:
         _domain = "invalid..domain"  # Invalid: empty component
     
     # Instantiate it
-    MyError(error_code="test")
+    MyError("Error message", error_code="test")
 except SplurgeSubclassError as e:
     print(f"Subclass error: {e}")
 ```
@@ -243,8 +239,8 @@ from splurge_exceptions import SplurgeValueError, SplurgeOSError
 # Application-level validation
 if not email:
     raise SplurgeValueError(
-        error_code="required-field",
-        message="Email is required"
+        "Email is required",
+        error_code="required-field"
     )
 
 # File operations
@@ -252,8 +248,8 @@ try:
     load_config()
 except FileNotFoundError as e:
     raise SplurgeOSError(
-        error_code="config-not-found",
-        message="Configuration file not found"
+        "Configuration file not found",
+        error_code="config-not-found"
     ) from e
 ```
 
@@ -273,8 +269,8 @@ class MyLibraryValidationError(MyLibraryError):
 
 # Now callers see: "mylibrary.validation.invalid-config"
 raise MyLibraryValidationError(
-    error_code="invalid-config",
-    message="Configuration is invalid"
+    "Configuration is invalid",
+    error_code="invalid-config"
 )
 ```
 
@@ -465,8 +461,8 @@ class CustomDatabaseError(SplurgeError):
 try:
     # database operation
     raise CustomDatabaseError(
+        "Failed to execute query",
         error_code="query-execution",  # NO dots allowed
-        message="Failed to execute query"
     )
 except CustomDatabaseError as e:
     print(e.full_code)  # Prints: database.custom.operations.query-execution
@@ -501,8 +497,8 @@ class ErrorMessageFormatter:
         Example:
             >>> formatter = ErrorMessageFormatter()
             >>> error = SplurgeValueError(
-            ...     error_code="invalid-email",
-            ...     message="Invalid email format"
+            ...     "Invalid email format",
+            ...     error_code="invalid-email"
             ... )
             >>> error.attach_context(key="field", value="email")
             >>> error.add_suggestion("Use valid email format")
