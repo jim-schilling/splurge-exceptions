@@ -8,7 +8,7 @@ Key Concepts:
 - Using libraries that internally use splurge-exceptions
 - Handling various error scenarios in client applications
 - Proper error propagation and context attachment
-- Using different exception handling patterns
+- Using explicit try/except patterns for clean error handling
 """
 
 from typing import Any
@@ -19,8 +19,6 @@ from splurge_exceptions import (
     SplurgeOSError,
     SplurgeRuntimeError,
     SplurgeValueError,
-    error_context,
-    handle_exceptions,
 )
 
 # ============================================================================
@@ -116,14 +114,6 @@ class UserService:
         self.db = DatabaseConnection(db_host, db_port, "users")
         self.formatter = ErrorMessageFormatter()
 
-    @handle_exceptions(
-        exceptions={
-            SplurgeOSError: (SplurgeRuntimeError, "database-connection-error"),
-            SplurgeRuntimeError: (SplurgeRuntimeError, "database-operation-error"),
-            SplurgeValueError: (SplurgeValueError, "database-validation-error"),
-        },
-        log_level="error",
-    )
     def get_user_by_id(self, user_id: int) -> dict[str, Any] | None:
         """Get user by ID with comprehensive error handling.
 
@@ -132,26 +122,48 @@ class UserService:
 
         Returns:
             User data or None if not found
+
+        Raises:
+            SplurgeRuntimeError: If database operations fail
+            SplurgeValueError: If validation fails
         """
-        # Connect to database
-        self.db.connect()
-
         try:
-            # Execute query
-            query = "SELECT * FROM users WHERE id = %s"
-            results = self.db.execute_query(query, [user_id])
+            # Connect to database
+            self.db.connect()
 
-            if not results:
-                return None
+            try:
+                # Execute query
+                query = "SELECT * FROM users WHERE id = %s"
+                results = self.db.execute_query(query, [user_id])
 
-            return results[0]
+                if not results:
+                    return None
 
-        finally:
-            # Always disconnect
-            self.db.disconnect()
+                return results[0]
+
+            finally:
+                # Always disconnect
+                self.db.disconnect()
+
+        except SplurgeOSError as e:
+            # Convert connection errors
+            error = SplurgeRuntimeError(
+                error_code="database-connection-error",
+                message=str(e.message or e.error_code),
+            )
+            raise error from e
+        except SplurgeRuntimeError as e:
+            # Re-raise runtime errors with context
+            e.attach_context("operation", "get_user_by_id")
+            e.attach_context("user_id", user_id)
+            raise
+        except SplurgeValueError as e:
+            # Validation errors pass through
+            e.attach_context("operation", "get_user_by_id")
+            raise
 
     def batch_get_users(self, user_ids: list[int]) -> list[dict[str, Any]]:
-        """Get multiple users by IDs using context manager.
+        """Get multiple users by IDs with error handling.
 
         Args:
             user_ids: List of user IDs
@@ -161,28 +173,19 @@ class UserService:
         """
         results = []
 
-        def handle_success():
-            print(f"Successfully retrieved {len(results)} users")
-
-        def handle_error(exc):
-            print(f"Error retrieving users: {self.formatter.format_error(exc)}")
-
         for user_id in user_ids:
-            with error_context(
-                exceptions={
-                    SplurgeOSError: (SplurgeRuntimeError, "connection-error"),
-                    SplurgeRuntimeError: (SplurgeRuntimeError, "query-error"),
-                    SplurgeValueError: (SplurgeValueError, "validation-error"),
-                },
-                context={"user_id": user_id, "operation": "batch_get"},
-                on_success=handle_success,
-                on_error=handle_error,
-                suppress=False,
-            ):
+            try:
                 user_data = self.get_user_by_id(user_id)
                 if user_data:
                     results.append(user_data)
+                    print(f"  + Retrieved user {user_id}")
+            except (SplurgeOSError, SplurgeRuntimeError, SplurgeValueError) as e:
+                error_msg = self.formatter.format_error(e, include_context=True)
+                print(f"  - Error retrieving user {user_id}:\n{error_msg}")
+                # Continue with next user instead of failing
+                continue
 
+        print(f"Successfully retrieved {len(results)} users")
         return results
 
     def create_user_with_validation(self, user_data: dict[str, Any]) -> int:
@@ -193,39 +196,41 @@ class UserService:
 
         Returns:
             Created user ID
-        """
-        # Validate input
-        if not isinstance(user_data, dict):
-            raise SplurgeValueError(error_code="invalid-input-type", message="User data must be a dictionary")
 
-        required_fields = ["name", "email"]
-        for field in required_fields:
-            if field not in user_data:
+        Raises:
+            SplurgeValueError: If validation fails
+            SplurgeRuntimeError: If database operations fail
+        """
+        try:
+            # Validate input
+            if not isinstance(user_data, dict):
                 raise SplurgeValueError(
-                    error_code="missing-required-field",
-                    message=f"Required field '{field}' is missing",
-                    details={"field": field, "provided_fields": list(user_data.keys())},
+                    error_code="invalid-input-type",
+                    message="User data must be a dictionary",
                 )
 
-        # Simulate database operations with error handling
-        with error_context(
-            exceptions={
-                SplurgeOSError: (SplurgeRuntimeError, "database-connection-error"),
-                SplurgeRuntimeError: (SplurgeRuntimeError, "database-operation-error"),
-                SplurgeValueError: (SplurgeValueError, "database-validation-error"),
-            },
-            context={"operation": "create_user", "user_email": user_data.get("email")},
-        ):
+            required_fields = ["name", "email"]
+            for field in required_fields:
+                if field not in user_data:
+                    raise SplurgeValueError(
+                        error_code="missing-required-field",
+                        message=f"Required field '{field}' is missing",
+                        details={"field": field, "provided_fields": list(user_data.keys())},
+                    )
+
+            # Validate email format
+            email = user_data["email"]
+            if "@" not in email:
+                raise SplurgeValueError(
+                    error_code="invalid-email-format",
+                    message="Invalid email format",
+                    details={"email": email},
+                )
+
+            # Simulate database operations
             self.db.connect()
 
             try:
-                # Validate email format
-                email = user_data["email"]
-                if "@" not in email:
-                    raise SplurgeValueError(
-                        error_code="invalid-email-format", message="Invalid email format", details={"email": email}
-                    )
-
                 # Simulate user creation
                 query = "INSERT INTO users (name, email) VALUES (%s, %s)"
                 self.db.execute_query(query, [user_data["name"], email])
@@ -235,6 +240,12 @@ class UserService:
 
             finally:
                 self.db.disconnect()
+
+        except (SplurgeOSError, SplurgeRuntimeError, SplurgeValueError) as e:
+            # Attach context and re-raise
+            e.attach_context("operation", "create_user")
+            e.attach_context("user_email", user_data.get("email"))
+            raise
 
 
 # ============================================================================
@@ -306,30 +317,21 @@ def demonstrate_validation_and_error_formatting():
 
 
 def demonstrate_error_context_and_callbacks():
-    """Demonstrate context managers with callbacks."""
-    print("\n=== Context Managers with Callbacks ===")
+    """Demonstrate error handling with context attachment."""
+    print("\n=== Error Handling with Context ===")
 
     service = UserService()
 
-    def log_success():
-        print("  ✓ User operation completed successfully")
-
-    def log_error(exc):
-        print(f"  ✗ User operation failed: {exc.error_code}")
-
-    # Demonstrate context manager with callbacks
-    with error_context(
-        exceptions={
-            SplurgeValueError: (SplurgeValueError, "user-validation-error"),
-            SplurgeRuntimeError: (SplurgeRuntimeError, "user-operation-error"),
-        },
-        context={"operation": "user_lookup"},
-        on_success=log_success,
-        on_error=log_error,
-    ):
+    try:
         user = service.get_user_by_id(1)
         if user:
-            print(f"  Retrieved user: {user['name']}")
+            print(f"  ✓ Retrieved user: {user['name']}")
+        else:
+            print("  ✓ User operation completed successfully")
+    except (SplurgeValueError, SplurgeRuntimeError, SplurgeOSError) as e:
+        print(f"  ✗ User operation failed: {e.error_code}")
+        formatted_error = service.formatter.format_error(e, include_context=True)
+        print(f"\n{formatted_error}")
 
 
 if __name__ == "__main__":

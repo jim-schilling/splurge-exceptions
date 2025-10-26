@@ -1,17 +1,14 @@
 # API Reference - Splurge Exceptions
 
-Complete API documentation for the Splurge Exceptions library (Version 2025.0.0).
+Complete API documentation for the Splurge Exceptions library (Version 2025.0.1).
 
 ## Table of Contents
 
 1. [Core Exceptions](#core-exceptions)
 2. [Error Code System](#error-code-system)
-3. [Wrapping & Conversion](#wrapping--conversion)
-4. [Context Managers](#context-managers)
-5. [Decorators](#decorators)
-6. [Message Formatting](#message-formatting)
-7. [Type Definitions](#type-definitions)
-8. [Import Statements](#import-statements)
+3. [Message Formatting](#message-formatting)
+4. [Type Definitions](#type-definitions)
+5. [Import Statements](#import-statements)
 
 ## Core Exceptions
 
@@ -28,10 +25,9 @@ class SplurgeError(Exception):
     def __init__(
         self,
         error_code: str,
+        *,
         message: str | None = None,
         details: dict[str, Any] | None = None,
-        severity: str = "error",
-        recoverable: bool = False,
     ) -> None:
         """Initialize Splurge exception.
         
@@ -42,15 +38,10 @@ class SplurgeError(Exception):
                        NO dots allowed in error codes.
             message: Human-readable error message
             details: Additional error details/context dictionary
-            severity: Error severity level
-                     Options: "info", "warning", "error", "critical"
-                     Default: "error"
-            recoverable: Whether error can be recovered from
-                        Default: False
         
         Raises:
-            TypeError: If _domain is not defined on the class
-            ValueError: If error_code or _domain don't match pattern, or severity is invalid
+            SplurgeSubclassError: If _domain is not defined or if error_code/_domain
+                don't match required patterns.
         
         Example:
             >>> class MyError(SplurgeError):
@@ -90,23 +81,13 @@ class SplurgeError(Exception):
         """Get the exception domain.
         
         Returns:
-            Domain string (e.g., "validation", "database.sql.query")
+            Domain string (e.g., "splurge.validation", "database.sql.query")
         """
         ...
     
     @property
     def message(self) -> str | None:
         """Get the error message."""
-        ...
-    
-    @property
-    def severity(self) -> str:
-        """Get the severity level."""
-        ...
-    
-    @property
-    def is_recoverable(self) -> bool:
-        """Check if error is recoverable."""
         ...
     
     def attach_context(
@@ -197,6 +178,108 @@ class SplurgeError(Exception):
         ...
 ```
 
+### SplurgeSubclassError
+
+Framework exception raised when a `SplurgeError` subclass is misconfigured.
+
+```python
+class SplurgeSubclassError(Exception):
+    """Raised when a SplurgeError subclass is misconfigured.
+
+    This exception indicates that a subclass of SplurgeError has:
+    - A missing or invalid ``_domain`` class attribute
+    - An invalid ``error_code`` value that doesn't match patterns
+    - An invalid ``_domain`` value that doesn't match patterns
+
+    This is a framework-level error and should only occur during development or
+    testing if exception subclasses are defined incorrectly.
+
+    Example:
+
+        class BrokenError(SplurgeError):
+            pass  # Missing _domain!
+
+        try:
+            BrokenError(error_code="test")
+        except SplurgeSubclassError as e:
+            print(f"Exception definition error: {e}")
+    """
+
+    pass
+```
+
+**When is this raised?**
+- Instantiating a `SplurgeError` subclass without defining `_domain` class attribute
+- Providing an invalid `error_code` that doesn't match `[a-z][a-z0-9-]*[a-z0-9]` pattern
+- Providing an invalid `_domain` that contains invalid component formats
+- Providing a `_domain` with empty dot-separated components (e.g., `"a..b"`)
+
+**Catching this exception:**
+```python
+from splurge_exceptions import SplurgeSubclassError
+
+try:
+    # Define exception
+    class MyError(SplurgeError):
+        _domain = "invalid..domain"  # Invalid: empty component
+    
+    # Instantiate it
+    MyError(error_code="test")
+except SplurgeSubclassError as e:
+    print(f"Subclass error: {e}")
+```
+
+### Built-In Semantic Exception Types
+
+Splurge Exceptions provides 8 built-in semantic exception types for convenience. These are intended for different use cases:
+
+#### For Applications
+
+If you're **building an application**, use these built-in types directly for common error scenarios:
+
+```python
+from splurge_exceptions import SplurgeValueError, SplurgeOSError
+
+# Application-level validation
+if not email:
+    raise SplurgeValueError(
+        error_code="required-field",
+        message="Email is required"
+    )
+
+# File operations
+try:
+    load_config()
+except FileNotFoundError as e:
+    raise SplurgeOSError(
+        error_code="config-not-found",
+        message="Configuration file not found"
+    ) from e
+```
+
+#### For Libraries
+
+If you're **building a library**, define your own exception hierarchy using `SplurgeFrameworkError` as the base. This makes error origins explicit and traceable:
+
+```python
+from splurge_exceptions import SplurgeFrameworkError
+
+# Your library defines its own hierarchy
+class MyLibraryError(SplurgeFrameworkError):
+    _domain = "mylibrary"
+
+class MyLibraryValidationError(MyLibraryError):
+    _domain = "mylibrary.validation"
+
+# Now callers see: "mylibrary.validation.invalid-config"
+raise MyLibraryValidationError(
+    error_code="invalid-config",
+    message="Configuration is invalid"
+)
+```
+
+See [Library Integration Guide](../README-DETAILS.md#library-integration-guide) for detailed examples.
+
 ### SplurgeValueError
 
 For input validation and data validation errors.
@@ -204,7 +287,7 @@ For input validation and data validation errors.
 ```python
 class SplurgeValueError(SplurgeError):
     """Raised when input validation fails."""
-    _domain = "value"
+    _domain = "splurge.value"
 ```
 
 **Common Error Codes:**
@@ -222,7 +305,7 @@ For operating system and file-related errors.
 ```python
 class SplurgeOSError(SplurgeError):
     """Raised for OS and file system errors."""
-    _domain = "os"
+    _domain = "splurge.os"
 ```
 
 **Common Error Codes:**
@@ -237,7 +320,7 @@ For lookup and search failures.
 ```python
 class SplurgeLookupError(SplurgeError):
     """Raised for lookup issues."""
-    _domain = "lookup"
+    _domain = "splurge.lookup"
 ```
 
 **Common Error Codes:**
@@ -252,7 +335,7 @@ For runtime execution errors.
 ```python
 class SplurgeRuntimeError(SplurgeError):
     """Raised for runtime execution errors."""
-    _domain = "runtime"
+    _domain = "splurge.runtime"
 ```
 
 **Common Error Codes:**
@@ -267,7 +350,7 @@ For type validation and conversion errors.
 ```python
 class SplurgeTypeError(SplurgeError):
     """Raised for type validation failures."""
-    _domain = "type"
+    _domain = "splurge.type"
 ```
 
 **Common Error Codes:**
@@ -282,7 +365,7 @@ For missing object attributes and methods.
 ```python
 class SplurgeAttributeError(SplurgeError):
     """Exception raised for missing object attributes/methods."""
-    _domain = "attribute"
+    _domain = "splurge.attribute"
 ```
 
 **Common Error Codes:**
@@ -296,7 +379,7 @@ For module import and loading failures.
 ```python
 class SplurgeImportError(SplurgeError):
     """Exception raised for module import failures."""
-    _domain = "import"
+    _domain = "splurge.import"
 ```
 
 **Common Error Codes:**
@@ -311,7 +394,7 @@ For framework-level errors and custom domain extensions.
 ```python
 class SplurgeFrameworkError(SplurgeError):
     """Base exception for framework-specific extensions."""
-    _domain = "framework"
+    _domain = "splurge.framework"
 ```
 
 **Common Error Codes:**
@@ -389,219 +472,6 @@ except CustomDatabaseError as e:
     print(e.full_code)  # Prints: database.custom.operations.query-execution
 ```
 
-## Wrapping & Conversion
-
-### wrap_exception
-
-Convert any exception to a Splurge exception.
-
-```python
-def wrap_exception(
-    exception: BaseException,
-    target_exception_type: type[SplurgeError],
-    error_code: str,
-    message: str | None = None,
-    context: dict[str, Any] | None = None,
-    suggestions: list[str] | None = None,
-    details: dict[str, Any] | None = None,
-) -> SplurgeError:
-    """Wrap source exception as Splurge exception.
-    
-    Args:
-        exception: Original exception to wrap
-        target_exception_type: Target Splurge exception class
-        error_code: User-defined semantic error code (e.g., "invalid-value", "timeout")
-                   Must match pattern: [a-z][a-z0-9-]*[a-z0-9]
-                   NO dots allowed
-        message: Custom message (uses original exception message if not provided)
-        context: Context dictionary to attach to wrapped exception
-        suggestions: Suggestions list to attach to wrapped exception
-        details: Additional detail information
-    
-    Returns:
-        Wrapped Splurge exception with __cause__ set to original
-    
-    Raises:
-        ValueError: If error_code format is invalid
-    
-    Example:
-        >>> try:
-        ...     value = int("invalid")
-        ... except ValueError as e:
-        ...     wrapped = wrap_exception(
-        ...         e,
-        ...         SplurgeValueError,
-        ...         error_code="invalid-value",
-        ...         message="Could not parse input as integer",
-        ...         context={"input": "invalid", "expected_type": "int"},
-        ...         suggestions=["Provide a valid integer"],
-        ...     )
-        ...     raise wrapped
-    
-    Features:
-        - Preserves exception chain (__cause__)
-        - Preserves original traceback
-        - Preserves exception context
-        - Attaches context and suggestions
-        - Supports custom messages
-    
-    Note:
-        error_code is REQUIRED. The registry-based resolution was removed
-        in version 2025.0.0. Users must provide explicit error codes.
-    """
-    ...
-```
-
-**Features:**
-- Required explicit error codes (semantic format)
-- Preserves exception chain
-- Attaches context and suggestions
-- Custom message support
-
-## Context Managers
-
-### error_context
-
-Context manager for exception handling with callbacks.
-
-```python
-@contextmanager
-def error_context(
-    exceptions: dict[type[Exception], tuple[type[SplurgeError], str | None]] | None = None,
-    context: dict[str, Any] | None = None,
-    on_success: Callable[[], Any] | None = None,
-    on_error: Callable[[Exception], Any] | None = None,
-    suppress: bool = False,
-) -> Iterator[None]:
-    """Context manager for exception handling and conversion.
-    
-    Args:
-        exceptions: Dict mapping source to (target exception, error_code)
-                   Format: {ValueError: (SplurgeValueError, "value.value.001")}
-        context: Dictionary of context data to attach to exceptions
-        on_success: Optional callback executed if no exception occurs
-                   Signature: Callable[[], Any]
-        on_error: Optional callback executed when exception caught
-                 Signature: Callable[[Exception], Any]
-        suppress: If True, suppress exceptions instead of reraising
-    
-    Yields:
-        None
-    
-    Raises:
-        Mapped exception if not suppressed
-    
-    Example:
-        >>> def handle_success():
-        ...     print("Success!")
-        >>> 
-        >>> def handle_error(exc):
-        ...     print(f"Error: {exc}")
-        >>> 
-        >>> with error_context(
-        ...     exceptions={
-        ...         ValueError: (SplurgeValueError, "value.001"),
-        ...     },
-        ...     context={"field": "email"},
-        ...     on_success=handle_success,
-        ...     on_error=handle_error,
-        ...     suppress=False,
-        ... ):
-        ...     validate_email(user_input)
-    
-    Features:
-        - Exception mapping and automatic conversion
-        - Context attachment
-        - Callback execution
-        - Exception suppression
-        - Nested context support
-    """
-    ...
-```
-
-**Parameters:**
-- `exceptions`: Mapping of source exception types to (target type, error code)
-- `context`: Data to attach to wrapped exceptions
-- `on_success`: Called on successful completion
-- `on_error`: Called when exception caught (receives wrapped exception)
-- `suppress`: If True, suppress exceptions instead of reraising
-
-**Behavior:**
-1. Execute code block
-2. If no exception: call `on_success` callback (if provided)
-3. If exception:
-   - Check if mapped in `exceptions` dict
-   - If mapped: wrap to target exception type
-   - If context provided: attach to wrapped exception
-   - Call `on_error` callback with wrapped exception
-   - If `suppress=False`: reraise wrapped exception
-   - If `suppress=True`: return normally
-
-## Decorators
-
-### handle_exceptions
-
-Decorator for automatic exception conversion.
-
-```python
-def handle_exceptions(
-    exceptions: dict[type[BaseException], tuple[type[SplurgeError], str | None]],
-    log_level: str = "error",
-    reraise: bool = True,
-    include_traceback: bool = True,
-) -> Callable[[F], F]:
-    """Decorator for automatic exception handling and conversion.
-    
-    Args:
-        exceptions: Dict mapping source to (target exception, error_code)
-                   Format: {ValueError: (SplurgeValueError, "value.001")}
-        log_level: Logging level for exceptions
-                  Options: "debug", "info", "warning", "error", "critical"
-                  Default: "error"
-        reraise: Whether to reraise wrapped exception (default: True)
-        include_traceback: Include traceback in log (default: True)
-    
-    Returns:
-        Decorated function
-    
-    Example:
-        >>> @handle_exceptions(
-        ...     exceptions={
-        ...         ValueError: (SplurgeValueError, "value.001"),
-        ...         FileNotFoundError: (SplurgeOSError, "os.file.001"),
-        ...     },
-        ...     log_level="error",
-        ...     reraise=True,
-        ... )
-        ... def process_file(path: str) -> str:
-        ...     with open(path) as f:
-        ...         return f.read()
-    
-    Features:
-        - Automatic exception conversion
-        - Logging of exceptions
-        - Optional exception suppression
-        - Works with methods, classmethods, staticmethods
-        - Preserves function signature and metadata
-    """
-    ...
-```
-
-**Parameters:**
-- `exceptions`: Exception type mapping
-- `log_level`: Python logging level ("debug", "info", "warning", "error", "critical")
-- `reraise`: If True, reraise wrapped exception; if False, return None
-- `include_traceback`: Include full traceback in log message
-
-**Behavior:**
-1. Wrap function
-2. On exception:
-   - Check if mapped in `exceptions` dict
-   - If mapped: wrap to target exception type
-   - Log exception with specified level
-   - If `reraise=True`: reraise wrapped exception
-   - If `reraise=False`: return None
-
 ## Message Formatting
 
 ### ErrorMessageFormatter
@@ -665,12 +535,6 @@ ExceptionMapping = dict[
     tuple[type[SplurgeError], str]
 ]
 
-# Severity levels
-SeverityLevel = Literal["info", "warning", "error", "critical"]
-
-# Log levels
-LogLevel = Literal["debug", "info", "warning", "error", "critical"]
-
 # Context data
 ContextData = dict[str, Any]
 
@@ -688,9 +552,10 @@ OnError = Callable[[Exception], Any]
 
 ```python
 from splurge_exceptions import (
-    # Base exception
+    # Base exceptions
     SplurgeError,
-    # Specific exceptions
+    SplurgeSubclassError,
+    # Semantic exceptions
     SplurgeValueError,
     SplurgeOSError,
     SplurgeLookupError,
@@ -699,12 +564,20 @@ from splurge_exceptions import (
     SplurgeAttributeError,
     SplurgeImportError,
     SplurgeFrameworkError,
-    # Utilities
-    wrap_exception,
-    handle_exceptions,
-    error_context,
+    # Formatting utility
     ErrorMessageFormatter,
 )
+```
+
+### Minimal imports (most common cases)
+
+```python
+from splurge_exceptions import (
+    SplurgeError,           # Base class for custom exceptions
+    SplurgeFrameworkError,  # Base for library-specific exceptions
+    ErrorMessageFormatter,  # Format errors for display
+)
+```
 
 ## Error Handling Best Practices
 
@@ -712,10 +585,8 @@ from splurge_exceptions import (
 2. **Use Type-Specific Exceptions**: Use the most appropriate Splurge exception type for the domain
 3. **Attach Context**: Always attach relevant context information for debugging
 4. **Add Suggestions**: Provide actionable recovery suggestions to users
-5. **Preserve Chains**: Let Python preserve exception chains automatically via `__cause__`
-6. **Log Appropriately**: Use decorators for automatic logging
-7. **Format for Users**: Use `ErrorMessageFormatter` for user-facing messages
-8. **Define Custom Domains**: Create custom exception classes with domain hierarchies for specific projects
+5. **Preserve Chains**: Always use `raise ... from` to preserve exception chains
+6. **Format for Users**: Use `ErrorMessageFormatter` for user-facing messages
 
 ## See Also
 

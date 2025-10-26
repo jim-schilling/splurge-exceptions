@@ -5,6 +5,18 @@ All notable changes to Splurge Exceptions will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Calendar Versioning](https://calver.org/).
 
+## [2025.0.1] - 2025-10-24
+
+### Changed
+- `SplurgeError` constructor signature updated to keyword-only arguments after `error_code`.
+- Updated all relevant documentation (API reference, detailed README) to reflect all changes for this feature branch.
+
+### Removed
+- `recoverable` parameter from `SplurgeError` constructor.
+- `is_recoverable()` property from `SplurgeError`.
+- `_recoverable` internal attribute from `SplurgeError`.
+- All references to recoverability in documentation.
+- `wrap_exception()` has been removed from public API and documentation.
 
 ## [2025.0.0] - 2025-10-23
 

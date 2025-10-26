@@ -31,14 +31,14 @@ class TestSplurgeValueError:
         )
 
         assert error.error_code == "invalid-value"
-        assert error.full_code == "value.invalid-value"
+        assert error.full_code == "splurge.value.invalid-value"
         assert error.message == "Invalid value"
-        assert error.domain == "value"
+        assert error.domain == "splurge.value"
 
     def test_can_catch_as_splurge_error(self) -> None:
         """Test catching as SplurgeError."""
         try:
-            raise SplurgeValueError("invalid-input", "Invalid")
+            raise SplurgeValueError("invalid-input", message="Invalid")
         except SplurgeError:
             pass
 
@@ -59,12 +59,12 @@ class TestSplurgeOSError:
 
         assert error.error_code == "file-not-found"
         assert error.message == "File not found"
-        assert error.domain == "os"
+        assert error.domain == "splurge.os"
 
     def test_can_catch_as_splurge_error(self) -> None:
         """Test catching as SplurgeError."""
         try:
-            raise SplurgeOSError("file-error", "File error")
+            raise SplurgeOSError("file-error", message="File error")
         except SplurgeError:
             pass
 
@@ -85,7 +85,7 @@ class TestSplurgeRuntimeError:
 
         assert error.error_code == "operation-failed"
         assert error.message == "Operation failed"
-        assert error.domain == "runtime"
+        assert error.domain == "splurge.runtime"
 
 
 class TestSplurgeFrameworkError:
@@ -104,13 +104,13 @@ class TestSplurgeFrameworkError:
 
         assert error.error_code == "framework-error"
         assert error.message == "Framework error"
-        assert error.domain == "framework"
+        assert error.domain == "splurge.framework"
 
     def test_can_be_subclassed_for_custom_framework(self) -> None:
         """Test that it can be subclassed for custom frameworks."""
 
         class SplurgeDsvError(SplurgeFrameworkError):
-            domain = "dsv"
+            _domain = "dsv"
 
         error = SplurgeDsvError(
             error_code="parse-failed",
@@ -137,14 +137,14 @@ class TestSplurgeTypeError:
         )
 
         assert error.error_code == "invalid-type"
-        assert error.full_code == "type.invalid-type"
+        assert error.full_code == "splurge.type.invalid-type"
         assert error.message == "Invalid type provided"
-        assert error.domain == "type"
+        assert error.domain == "splurge.type"
 
     def test_can_catch_as_splurge_error(self) -> None:
         """Test catching as SplurgeError."""
         try:
-            raise SplurgeTypeError("type-mismatch", "Type mismatch")
+            raise SplurgeTypeError("type-mismatch", message="Type mismatch")
         except SplurgeError:
             pass
 
@@ -164,14 +164,14 @@ class TestSplurgeAttributeError:
         )
 
         assert error.error_code == "missing-attribute"
-        assert error.full_code == "attribute.missing-attribute"
+        assert error.full_code == "splurge.attribute.missing-attribute"
         assert error.message == "Attribute does not exist"
-        assert error.domain == "attribute"
+        assert error.domain == "splurge.attribute"
 
     def test_can_catch_as_splurge_error(self) -> None:
         """Test catching as SplurgeError."""
         try:
-            raise SplurgeAttributeError("attribute-not-found", "Attribute not found")
+            raise SplurgeAttributeError("attribute-not-found", message="Attribute not found")
         except SplurgeError:
             pass
 
@@ -191,14 +191,14 @@ class TestSplurgeImportError:
         )
 
         assert error.error_code == "module-not-found"
-        assert error.full_code == "import.module-not-found"
+        assert error.full_code == "splurge.import.module-not-found"
         assert error.message == "Module could not be imported"
-        assert error.domain == "import"
+        assert error.domain == "splurge.import"
 
     def test_can_catch_as_splurge_error(self) -> None:
         """Test catching as SplurgeError."""
         try:
-            raise SplurgeImportError("import-failed", "Import failed")
+            raise SplurgeImportError("import-failed", message="Import failed")
         except SplurgeError:
             pass
 
@@ -218,14 +218,14 @@ class TestSplurgeLookupError:
         )
 
         assert error.error_code == "item-not-found"
-        assert error.full_code == "lookup.item-not-found"
+        assert error.full_code == "splurge.lookup.item-not-found"
         assert error.message == "Item not found in collection"
-        assert error.domain == "lookup"
+        assert error.domain == "splurge.lookup"
 
     def test_can_catch_as_splurge_error(self) -> None:
         """Test catching as SplurgeError."""
         try:
-            raise SplurgeLookupError("lookup-failed", "Lookup failed")
+            raise SplurgeLookupError("lookup-failed", message="Lookup failed")
         except SplurgeError:
             pass
 
@@ -267,51 +267,51 @@ class TestExceptionHierarchy:
 
     def test_context_management_inherited(self) -> None:
         """Test that context management is inherited."""
-        error = SplurgeValueError("invalid-field", "Invalid")
+        error = SplurgeValueError("invalid-field", message="Invalid")
         error.attach_context(key="field", value="email")
 
         assert error.get_context("field") == "email"
-        assert error.domain == "value"
+        assert error.domain == "splurge.value"
 
     def test_suggestions_inherited(self) -> None:
         """Test that suggestions are inherited."""
-        error = SplurgeOSError("file-error", "File error")
+        error = SplurgeOSError("file-error", message="File error")
         error.add_suggestion("Check file path")
 
         assert error.get_suggestions() == ["Check file path"]
-        assert error.domain == "os"
+        assert error.domain == "splurge.os"
 
     def test_type_error_inherited(self) -> None:
         """Test that type error is inherited."""
-        error = SplurgeTypeError("type-error", "Type error")
+        error = SplurgeTypeError("type-error", message="Type error")
         error.add_suggestion("Check type")
 
         assert error.get_suggestions() == ["Check type"]
-        assert error.domain == "type"
+        assert error.domain == "splurge.type"
 
     def test_lookup_error_inherited(self) -> None:
         """Test that lookup error is inherited."""
-        error = SplurgeLookupError("lookup-error", "Lookup error")
+        error = SplurgeLookupError("lookup-error", message="Lookup error")
         error.add_suggestion("Check lookup")
 
         assert error.get_suggestions() == ["Check lookup"]
-        assert error.domain == "lookup"
+        assert error.domain == "splurge.lookup"
 
     def test_runtime_error_inherited(self) -> None:
         """Test that runtime error is inherited."""
-        error = SplurgeRuntimeError("runtime-error", "Runtime error")
+        error = SplurgeRuntimeError("runtime-error", message="Runtime error")
         error.add_suggestion("Check runtime")
 
         assert error.get_suggestions() == ["Check runtime"]
-        assert error.domain == "runtime"
+        assert error.domain == "splurge.runtime"
 
     def test_framework_error_inherited(self) -> None:
         """Test that framework error is inherited."""
-        error = SplurgeFrameworkError("framework-error", "Framework error")
+        error = SplurgeFrameworkError("framework-error", message="Framework error")
         error.add_suggestion("Check framework")
 
         assert error.get_suggestions() == ["Check framework"]
-        assert error.domain == "framework"
+        assert error.domain == "splurge.framework"
 
 
 class TestCatchingBySpecificType:
@@ -322,7 +322,7 @@ class TestCatchingBySpecificType:
         caught = False
 
         try:
-            raise SplurgeValueError("invalid-input", "Invalid")
+            raise SplurgeValueError("invalid-input", message="Invalid")
         except SplurgeValueError:
             caught = True
 
@@ -333,7 +333,7 @@ class TestCatchingBySpecificType:
         caught = False
 
         try:
-            raise SplurgeOSError("file-error", "File error")
+            raise SplurgeOSError("file-error", message="File error")
         except SplurgeOSError:
             caught = True
 
@@ -344,7 +344,7 @@ class TestCatchingBySpecificType:
         caught = False
 
         try:
-            raise SplurgeLookupError("lookup-error", "Lookup error")
+            raise SplurgeLookupError("lookup-error", message="Lookup error")
         except SplurgeLookupError:
             caught = True
 
@@ -355,7 +355,7 @@ class TestCatchingBySpecificType:
         caught = False
 
         try:
-            raise SplurgeTypeError("type-error", "Type error")
+            raise SplurgeTypeError("type-error", message="Type error")
         except SplurgeTypeError:
             caught = True
 
@@ -366,7 +366,7 @@ class TestCatchingBySpecificType:
         caught = False
 
         try:
-            raise SplurgeRuntimeError("runtime-error", "Runtime error")
+            raise SplurgeRuntimeError("runtime-error", message="Runtime error")
         except SplurgeRuntimeError:
             caught = True
 
@@ -377,7 +377,7 @@ class TestCatchingBySpecificType:
         caught = False
 
         try:
-            raise SplurgeFrameworkError("framework-error", "Framework error")
+            raise SplurgeFrameworkError("framework-error", message="Framework error")
         except SplurgeFrameworkError:
             caught = True
 
@@ -388,7 +388,7 @@ class TestCatchingBySpecificType:
         caught = False
 
         try:
-            raise SplurgeAttributeError("attribute-error", "Attribute error")
+            raise SplurgeAttributeError("attribute-error", message="Attribute error")
         except SplurgeAttributeError:
             caught = True
 
@@ -399,7 +399,7 @@ class TestCatchingBySpecificType:
         caught = False
 
         try:
-            raise SplurgeImportError("import-error", "Import error")
+            raise SplurgeImportError("import-error", message="Import error")
         except SplurgeImportError:
             caught = True
 
@@ -408,14 +408,14 @@ class TestCatchingBySpecificType:
     def test_catch_generic_splurge_error(self) -> None:
         """Test catching all Splurge errors generically."""
         exception_types = [
-            SplurgeValueError("invalid-data", "Invalid"),
-            SplurgeOSError("file-error", "File error"),
-            SplurgeLookupError("parse-error", "Lookup error"),
-            SplurgeTypeError("type-error", "Type error"),
-            SplurgeAttributeError("attribute-error", "Attribute error"),
-            SplurgeImportError("import-error", "Import error"),
-            SplurgeFrameworkError("framework-error", "Framework error"),
-            SplurgeRuntimeError("runtime-error", "Runtime error"),
+            SplurgeValueError("invalid-data", message="Invalid"),
+            SplurgeOSError("file-error", message="File error"),
+            SplurgeLookupError("parse-error", message="Lookup error"),
+            SplurgeTypeError("type-error", message="Type error"),
+            SplurgeAttributeError("attribute-error", message="Attribute error"),
+            SplurgeImportError("import-error", message="Import error"),
+            SplurgeFrameworkError("framework-error", message="Framework error"),
+            SplurgeRuntimeError("runtime-error", message="Runtime error"),
         ]
 
         for exc in exception_types:

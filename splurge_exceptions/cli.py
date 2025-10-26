@@ -1,6 +1,13 @@
-"""Command-line interface for Splurge Exceptions.
+"""Command-line interface for the Splurge Exceptions framework.
 
-Provides CLI commands for the Splurge Exceptions framework.
+This module provides a minimal CLI that currently only exposes package
+metadata (version). It's intentionally lightweight; when run without
+subcommands it prints help.
+
+Examples:
+
+    python -m splurge_exceptions --version
+
 """
 
 import argparse
@@ -10,13 +17,13 @@ from splurge_exceptions import __version__
 
 
 def main(args: list[str] | None = None) -> int:
-    """Main CLI entry point.
+    """Main entry point for the command-line interface.
 
     Args:
-        args: Command-line arguments (defaults to sys.argv[1:])
+        args: Command-line arguments (defaults to sys.argv[1:]).
 
     Returns:
-        Exit code (0 for success, 1+ for errors)
+        int: Exit code (0 for success).
     """
     parser = argparse.ArgumentParser(
         prog="splurge-exceptions",

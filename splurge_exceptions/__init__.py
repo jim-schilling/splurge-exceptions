@@ -1,12 +1,25 @@
-"""Splurge Exceptions Framework - Core module.
+"""Core package for the Splurge Exceptions framework.
 
-This module provides the base exception class and core error handling infrastructure
-for the Splurge family of Python libraries and tools.
+This package exposes the public exception classes and helpers that form the
+core of the Splurge Exceptions project. The package is intentionally small —
+it provides semantic exception types and a message formatter for use by
+applications and libraries.
 
-DOMAINS: ["exceptions", "errors"]
+Usage example:
+
+    from splurge_exceptions import SplurgeValueError, ErrorMessageFormatter
+
+    exc = SplurgeValueError(error_code="invalid-value", message="Invalid input")
+    fmt = ErrorMessageFormatter()
+    print(fmt.format_error(exc, include_context=True))
+
+Attributes:
+    __version__ (str): Package version string.
+    __domains__ (list[str]): Logical domains used by the project.
+
 """
 
-from splurge_exceptions.core.base import SplurgeError
+from splurge_exceptions.core.base import SplurgeError, SplurgeSubclassError
 from splurge_exceptions.core.exceptions import (
     SplurgeAttributeError,
     SplurgeFrameworkError,
@@ -17,16 +30,14 @@ from splurge_exceptions.core.exceptions import (
     SplurgeTypeError,
     SplurgeValueError,
 )
-from splurge_exceptions.decorators.error_handler import handle_exceptions
 from splurge_exceptions.formatting.message import ErrorMessageFormatter
-from splurge_exceptions.managers.exception import error_context
-from splurge_exceptions.wrappers.stdlib import wrap_exception
 
-__version__ = "2025.0.0"
+__version__ = "2025.0.1"
 __domains__ = ["exceptions", "errors", "handlers"]
 
 __all__ = [
     "SplurgeError",
+    "SplurgeSubclassError",
     "SplurgeValueError",
     "SplurgeOSError",
     "SplurgeLookupError",
@@ -35,8 +46,5 @@ __all__ = [
     "SplurgeAttributeError",
     "SplurgeImportError",
     "SplurgeFrameworkError",
-    "wrap_exception",
-    "handle_exceptions",
-    "error_context",
     "ErrorMessageFormatter",
 ]

@@ -13,8 +13,6 @@ from typing import cast
 from splurge_exceptions import (
     ErrorMessageFormatter,
     SplurgeValueError,
-    error_context,
-    wrap_exception,
 )
 
 
@@ -75,69 +73,3 @@ def test_formatter_handles_varied_value_types() -> None:
     assert isinstance(out, str)
     # ensure long string was included (or at least not truncated to empty)
     assert "fmt" in out
-
-
-def test_nested_context_precedence_variations() -> None:
-    # scenario 1: outer provides dict, inner provides scalar -> inner wins
-    caught = None
-    try:
-        with error_context(exceptions={ValueError: (SplurgeValueError, "c1")}, context={"k": {"v": "outer"}}):
-            with error_context(exceptions={ValueError: (SplurgeValueError, "c1")}, context={"k": "inner"}):
-                raise ValueError("x")
-    except SplurgeValueError as e:
-        caught = e
-
-    assert caught is not None
-    assert caught.get_context("k") == "inner"
-
-    # scenario 2: outer scalar, inner dict -> inner wins
-    caught = None
-    try:
-        with error_context(exceptions={ValueError: (SplurgeValueError, "c2")}, context={"k": "outer"}):
-            with error_context(exceptions={ValueError: (SplurgeValueError, "c2")}, context={"k": {"v": "inner"}}):
-                raise ValueError("x")
-    except SplurgeValueError as e:
-        caught = e
-
-    assert caught is not None
-    assert isinstance(caught.get_context("k"), dict)
-    assert caught.get_context("k")["v"] == "inner"
-
-
-def test_nested_dict_vs_dict_replaces_outer() -> None:
-    """When both outer and inner contexts provide dict values for the same
-    key, the inner dict should replace the outer dict (no deep/recursive
-    merge)."""
-
-    caught = None
-    try:
-        with error_context(exceptions={ValueError: (SplurgeValueError, "c3")}, context={"k": {"a": 1}}):
-            with error_context(exceptions={ValueError: (SplurgeValueError, "c3")}, context={"k": {"b": 2}}):
-                raise ValueError("x")
-    except SplurgeValueError as e:
-        caught = e
-
-    assert caught is not None
-    val = caught.get_context("k")
-    # Should be the inner dict only (replace semantics)
-    assert isinstance(val, dict)
-    assert "b" in val and val["b"] == 2
-    assert "a" not in val
-
-
-def test_exception_chaining_and_raise_from_semantics() -> None:
-    orig = ValueError("orig")
-    wrapped = wrap_exception(orig, SplurgeValueError, error_code="wrapped")
-    # wrap_exception sets __cause__ to the original exception
-    assert wrapped.__cause__ is orig
-
-    # raising wrapped from orig should preserve cause identity when caught
-    try:
-        try:
-            raise orig
-        except ValueError as e:
-            wrapped2 = wrap_exception(e, SplurgeValueError, error_code="wrapped2")
-            raise wrapped2 from e
-    except SplurgeValueError as ex:
-        # The cause should be the original ValueError instance
-        assert ex.__cause__ is orig

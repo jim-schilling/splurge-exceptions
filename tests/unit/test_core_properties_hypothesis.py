@@ -74,32 +74,8 @@ class TestSplurgeErrorCoreProperties:
     def test_full_code_combines_domain_and_code(self, error_code: str) -> None:
         """Property: Full code combines domain and error code with dot."""
         error = SplurgeValueError(error_code=error_code)
-        assert error.full_code == f"value.{error_code}"
+        assert error.full_code == f"splurge.value.{error_code}"
         assert error.full_code.endswith(error_code)
-
-    @given(
-        valid_error_codes(),
-        st.sampled_from(
-            [
-                SplurgeError.SEVERITY_INFO,
-                SplurgeError.SEVERITY_WARNING,
-                SplurgeError.SEVERITY_ERROR,
-                SplurgeError.SEVERITY_CRITICAL,
-            ]
-        ),
-    )
-    def test_valid_severity_accepted(self, error_code: str, severity: str) -> None:
-        """Property: Valid severity levels are always accepted."""
-        error = SplurgeValueError(error_code=error_code, severity=severity)
-        assert error.severity == severity
-
-    @given(valid_error_codes(), st.booleans())
-    def test_recoverable_flag_preserved(self, error_code: str, recoverable: bool) -> None:
-        """Property: Recoverable flag is always preserved."""
-        error = SplurgeValueError(error_code=error_code, recoverable=recoverable)
-        assert error._recoverable == recoverable
-        assert error.recoverable == recoverable
-        assert error.is_recoverable() == recoverable
 
     @given(valid_error_codes(), st.dictionaries(st.text(min_size=1, max_size=30), st.text(max_size=100), max_size=10))
     def test_details_preserved(self, error_code: str, details: dict[str, str]) -> None:
