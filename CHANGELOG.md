@@ -23,7 +23,13 @@ and this project adheres to [Calendar Versioning](https://calver.org/).
   - Edge dash stripping: `"-code-"` → `"code"`
   - Empty codes become `None` (no validation error raised)
 - **34 comprehensive coverage gap tests** for edge cases and error paths
-- **99% test coverage** with 81 total unit tests
+- **21 Hypothesis property-based tests** validating core exception properties across 2,100+ auto-generated test cases:
+  - Core properties (message preservation, error code normalization)
+  - Context and suggestion management
+  - Message formatting consistency
+  - Exception hierarchy and chaining
+  - Full workflow integration tests
+- **99% test coverage** with 102 total unit tests (81 example-based + 21 property-based)
 - Complete documentation updates for all examples and API references
 
 ### Fixed
