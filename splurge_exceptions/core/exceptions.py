@@ -1,6 +1,12 @@
-"""Core exception types for Splurge Exceptions Framework.
+"""Semantic exception classes for the splurge-exceptions framework.
 
-DOMAINS: ["exceptions", "core"]
+This module defines a small set of semantic exception subclasses that
+cover common error categories (value, OS, lookup, runtime, type,
+attribute, import) and a framework base type for library authors to extend.
+
+Each subclass sets a class-level ``_domain`` that is combined with the
+user-provided ``error_code`` to create a full hierarchical error identifier
+used by formatters and telemetry.
 """
 
 from splurge_exceptions.core.base import SplurgeError
@@ -18,133 +24,94 @@ __all__ = [
 
 
 class SplurgeValueError(SplurgeError):
-    """Exception raised for value validation failures.
+    """Error for data and value validation failures.
 
-    Used when input data, configuration, or state validation fails.
+    Use this exception when input values, configuration, or internal state
+    fail validation checks.
 
-    Example:
-        >>> raise SplurgeValueError(
-        ...     error_code="invalid-value",
-        ...     message="Invalid value provided"
-        ...     details={"value": "123", "expected": "int"}
-        ... )
+    Attributes:
+        _domain (str): "splurge.value"
     """
 
-    _domain = "value"
+    _domain = "splurge.value"
 
 
 class SplurgeOSError(SplurgeError):
-    """Exception raised for OS, system, and I/O failures.
+    """Error for OS, filesystem, and I/O related failures.
 
-    Used for file system operations, system calls, and I/O-related errors.
-
-    Example:
-        >>> raise SplurgeOSError(
-        ...     error_code="file-not-found",
-        ...     message="File not found"
-        ...     details={"operation": "file_read", "path": "/data/data.txt"}
-        ... )
+    Attributes:
+        _domain (str): "splurge.os"
     """
 
-    _domain = "os"
+    _domain = "splurge.os"
 
 
 class SplurgeLookupError(SplurgeError):
-    """Exception raised for lookup issues.
+    """Error when lookup or retrieval operations fail.
 
-    Used when lookup, retrieval, or search fails.
-
-    Example:
-        >>> raise SplurgeLookupError(
-        ...     error_code="invalid-format",
-        ...     message="Invalid lookup"
-        ...     details={"query": "SELECT * FROM users WHERE id = 1"}
-        ... )
+    Attributes:
+        _domain (str): "splurge.lookup"
     """
 
-    _domain = "lookup"
+    _domain = "splurge.lookup"
 
 
 class SplurgeRuntimeError(SplurgeError):
-    """Exception raised for runtime operation failures.
+    """Error for general runtime failures.
 
-    Used for runtime errors that occur during program execution.
-
-    Example:
-        >>> raise SplurgeRuntimeError(
-        ...     error_code="operation-failed",
-        ...     message="Operation failed"
-        ...     details={"operation": "file_read", "path": "/data/data.txt"}
-        ... )
+    Attributes:
+        _domain (str): "splurge.runtime"
     """
 
-    _domain = "runtime"
+    _domain = "splurge.runtime"
 
 
 class SplurgeTypeError(SplurgeError):
-    """Exception raised for type validation failures.
+    """Error for type validation and conversion failures.
 
-    Used when type validation, conversion, or casting fails.
-
-    Example:
-        >>> raise SplurgeTypeError(
-        ...     error_code="invalid-type",
-        ...     message="Invalid type"
-        ...     details={"expected": "int", "received": "str"}
-        ... )
+    Attributes:
+        _domain (str): "splurge.type"
     """
 
-    _domain = "type"
+    _domain = "splurge.type"
 
 
 class SplurgeAttributeError(SplurgeError):
-    """Exception raised for missing object attributes/methods.
+    """Error when required attributes or methods are missing on objects.
 
-    Used when accessing attributes or methods that don't exist on an object.
-
-    Example:
-        >>> raise SplurgeAttributeError(
-        ...     error_code="missing-attribute",
-        ...     message="Attribute does not exist"
-        ...     details={"object": "MyClass", "attribute": "missing_method"}
-        ... )
+    Attributes:
+        _domain (str): "splurge.attribute"
     """
 
-    _domain = "attribute"
+    _domain = "splurge.attribute"
 
 
 class SplurgeImportError(SplurgeError):
-    """Exception raised for module import failures.
+    """Error for module import and dynamic loading failures.
 
-    Used when module loading, importing, or plugin loading fails.
-
-    Example:
-        >>> raise SplurgeImportError(
-        ...     error_code="module-not-found",
-        ...     message="Module could not be imported"
-        ...     details={"module": "mymodule", "path": "/path/to/module"}
-        ... )
+    Attributes:
+        _domain (str): "splurge.import"
     """
 
-    _domain = "import"
+    _domain = "splurge.import"
 
 
 class SplurgeFrameworkError(SplurgeError):
-    """Base exception for framework-specific extensions.
+    """Base class intended for framework/library extensions.
 
-    This class serves as the base for exceptions defined by frameworks
-    built on top of splurge-exceptions. Domain-specific frameworks should
-    inherit from this class to create their own exception hierarchies.
+    Libraries that build on top of splurge-exceptions should subclass this
+    exception and set a library-specific ``_domain`` to ensure their full
+    error codes are namespaced and discoverable.
 
     Example:
-        >>> from splurge_exceptions import SplurgeFrameworkError
-        >>> class SplurgeDsvError(SplurgeFrameworkError):
-        ...     _domain = "dsv"
-        >>> raise SplurgeDsvError(
-        ...     error_code="parse-failed",
-        ...     message="Failed to parse DSV file"
-        ...     details={"operation": "file_read", "path": "/data/data.txt"}
-        ... )
+
+        class SplurgeDsvError(SplurgeFrameworkError):
+            _domain = "splurge-dsv"
+
+        raise SplurgeDsvError(error_code="parse-failed", message="DSV parse failed")
+
+    Attributes:
+        _domain (str): "splurge.framework"
     """
 
-    _domain = "framework"
+    _domain = "splurge.framework"

@@ -18,7 +18,7 @@ from typing import Any
 from hypothesis import given
 from hypothesis import strategies as st
 
-from splurge_exceptions import ErrorMessageFormatter, SplurgeValueError
+from splurge_exceptions import ErrorMessageFormatter, SplurgeSubclassError, SplurgeValueError
 
 
 @given(
@@ -116,15 +116,15 @@ def test_unicode_and_long_strings_in_codes_messages_and_context(
     )
 )
 def test_invalid_error_codes_raise_value_error(bad: str) -> None:
-    """User-supplied invalid error_code values should raise ValueError on construction."""
+    """User-supplied invalid error_code values should raise SplurgeSubclassError on construction."""
 
     try:
         # Attempt to construct with invalid code - constructor should validate
         SplurgeValueError(error_code=bad, message="bad")
-    except ValueError:
+    except SplurgeSubclassError:
         # expected
         return
 
-    # If no ValueError was raised, ensure the code actually matched the allowed pattern
+    # If no SplurgeSubclassError was raised, ensure the code actually matched the allowed pattern
     # (this is defensive: if Hypothesis produced a valid component, accept it)
     assert all(c.islower() or c.isdigit() or c == "-" for c in bad) and bad and bad[0].islower()

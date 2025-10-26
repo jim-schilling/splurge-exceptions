@@ -47,7 +47,7 @@ python -m splurge_exceptions --version
 
 **Output:**
 ```
-splurge-exceptions 2025.0.0
+splurge-exceptions 2025.0.1
 ```
 
 ### --help

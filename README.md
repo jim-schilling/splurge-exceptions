@@ -11,7 +11,7 @@
 
 
 
-A comprehensive Python exception management library that provides structured error handling, exception wrapping, and intelligent error code management for modern applications.
+A comprehensive Python exception management library that provides structured error handling, semantic error codes, and intelligent error organization for modern applications.
 
 ## Quick Start
 
@@ -23,56 +23,46 @@ pip install splurge-exceptions
 
 ### Basic Usage
 
-#### 1. Wrap Exceptions
+#### 1. Create Structured Exceptions
 
 ```python
-from splurge_exceptions import wrap_exception, SplurgeValueError
+from splurge_exceptions import SplurgeValueError
+
+# Create a semantic exception with context
+error = SplurgeValueError(
+    error_code="invalid-email",
+    message="Email address format is invalid",
+    details={"provided": "user@", "expected": "user@domain.com"}
+)
+
+# Attach context and suggestions
+error.attach_context("user_id", 12345)
+error.add_suggestion("Use format: username@domain.com")
+error.add_suggestion("Verify domain is included")
+
+# Full error code: "splurge.value.invalid-email"
+print(error.full_code)
+```
+
+#### 2. Convert Exceptions with Chaining
+
+```python
+from splurge_exceptions import SplurgeValueError
 
 try:
-    age = int("not a number")
+    # Some operation that might fail
+    int("invalid")
 except ValueError as e:
-    error = wrap_exception(
-        e,
-        SplurgeValueError,
-        error_code="invalid-value",
-        message="Could not parse age as integer",
+    # Wrap the exception with structured error
+    wrapped = SplurgeValueError(
+        error_code="invalid-integer",
+        message="Could not parse input as integer",
+        details={"input": "invalid"}
     )
-    raise error
+    raise wrapped from e
 ```
 
-#### 2. Use Context Manager
-
-```python
-from splurge_exceptions import error_context, SplurgeValueError
-
-with error_context(
-    exceptions={
-        ValueError: (SplurgeValueError, "invalid-value"),
-    },
-    context={"field": "email"},
-    suppress=False,
-):
-    # Your code here
-    validate_email(user_input)
-```
-
-#### 3. Use Decorator
-
-```python
-from splurge_exceptions import handle_exceptions, SplurgeOSError
-
-@handle_exceptions(
-    exceptions={
-        FileNotFoundError: (SplurgeOSError, "file-not-found"),
-    },
-    log_level="error",
-)
-def read_file(path: str) -> str:
-    with open(path) as f:
-        return f.read()
-```
-
-#### 4. Format Errors
+#### 3. Format Errors for Users
 
 ```python
 from splurge_exceptions import ErrorMessageFormatter
@@ -86,15 +76,31 @@ formatted = formatter.format_error(
 print(formatted)
 ```
 
+#### 4. Integration Support for Splurge Family Libraries
+```python
+from splurge_exceptions import SplurgeFrameworkError
+
+class SplurgeSafeIoError(SplurgeFrameworkError):
+    _domain = "splurge-safe-io"
+
+class SplurgeSafeIoRuntimeError(SplurgeSafeIoError):
+    _domain = "splurge-safe-io.runtime"
+
+raise SplurgeSafeIoRuntimeError(
+    error_code="unexpected",
+    message="Unexpected error occurred",
+)
+# Resulting full error code: "splurge-safe-io.runtime.unexpected"
+```
+
 ## Key Features
 
-✨ **Exception Wrapping** - Convert any exception to structured Splurge exceptions
-🎯 **Error Codes** - Intelligent error code management with domain-based organization
-🔄 **Context Managers** - Handle exceptions with optional callbacks and context
-🏷️ **Decorators** - Automatic exception conversion on decorated functions
-📋 **Message Formatting** - Beautiful, structured error message output
-🖥️ **CLI Tools** - Browse error codes and generate documentation
-📊 **Type Safe** - Full type annotations with MyPy strict mode support
+🎯 **Semantic Error Codes** - Hierarchical error codes with domain organization  
+� **Exception Chaining** - Preserve exception chains with `raise ... from`  
+📋 **Context Attachment** - Add operation context and recovery suggestions  
+� **Message Formatting** - Beautiful, structured error message output  
+� **Type Safe** - Full type annotations with MyPy strict mode support  
+🎭 **Framework Extensions** - Clean extension points for domain-specific exceptions
 
 ## Exception Types
 
@@ -109,6 +115,7 @@ Splurge Exceptions provides 9 exception types for different error scenarios:
 - `SplurgeImportError` - Module import failures
 - `SplurgeLookupError` - Lookup errors
 - `SplurgeFrameworkError` - Framework-level errors
+- `SplurgeSubclassError` - Framework misconfiguration errors (used internally)
 
 ## Documentation
 
@@ -123,12 +130,10 @@ Splurge Exceptions provides 9 exception types for different error scenarios:
 splurge-exceptions/
 ├── splurge_exceptions/          # Main package
 │   ├── core/                    # Core exceptions and error codes
-│   ├── wrappers/                # Exception wrapping utilities
-│   ├── decorators/              # Decorator utilities
-│   ├── managers/                # Context managers
-│   ├── formatting/              # Message formatting
+│   ├── formatting/              # Message formatting utilities
+│   ├── context/                 # Context utilities
 │   └── cli.py                   # CLI interface
-├── tests/                       # Test suite (245+ tests)
+├── tests/                       # Test suite (130+ tests)
 │   ├── unit/                    # Unit tests
 │   └── integration/             # Integration tests
 └── docs/                        # Documentation
@@ -138,7 +143,7 @@ splurge-exceptions/
 
 The library includes comprehensive test coverage:
 
-- **229 tests** - Unit tests (100% passing)
+- **130 tests** - Unit tests (100% passing)
 - **94% code coverage** - All public APIs tested
 - **MyPy strict mode** - Full type safety validation
 - **Ruff linting** - Code quality enforcement

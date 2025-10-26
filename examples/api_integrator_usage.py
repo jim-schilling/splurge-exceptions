@@ -21,11 +21,9 @@ from typing import Any
 
 from splurge_exceptions import (
     ErrorMessageFormatter,
+    SplurgeError,
     SplurgeFrameworkError,
     SplurgeOSError,
-    error_context,
-    handle_exceptions,
-    wrap_exception,
 )
 
 # ============================================================================
@@ -151,41 +149,41 @@ class DatabaseClient:
         self.connection = None
         self.formatter = ErrorMessageFormatter()
 
-    @handle_exceptions(
-        exceptions={
-            ConnectionError: (SplurgeConnectionError, "connection-refused"),
-            TimeoutError: (SplurgeConnectionError, "connection-timeout"),
-            ValueError: (SplurgeSqlError, "invalid-connection-string"),
-        },
-        log_level="warning",
-        reraise=True,
-        include_traceback=False,
-    )
     def connect(self) -> None:
         """Establish database connection with comprehensive error handling."""
-        # Simulate connection logic
-        if "invalid" in self.connection_string.lower():
-            raise ValueError("Invalid connection string format")
+        try:
+            # Simulate connection logic
+            if "invalid" in self.connection_string.lower():
+                raise ValueError("Invalid connection string format")
 
-        if "timeout" in self.connection_string.lower():
-            raise TimeoutError("Connection timeout")
+            if "timeout" in self.connection_string.lower():
+                raise TimeoutError("Connection timeout")
 
-        if "refused" in self.connection_string.lower():
-            raise ConnectionError("Connection refused")
+            if "refused" in self.connection_string.lower():
+                raise ConnectionError("Connection refused")
 
-        # Simulate successful connection
-        self.connection = {"status": "connected"}
-        print("Database connected successfully")
+            # Simulate successful connection
+            self.connection = {"status": "connected"}
+            print("Database connected successfully")
+        except (ConnectionError, TimeoutError, ValueError) as e:
+            error: SplurgeError
+            if isinstance(e, ConnectionError):
+                error = SplurgeConnectionError(
+                    error_code="connection-refused",
+                    message=str(e),
+                )
+            elif isinstance(e, TimeoutError):
+                error = SplurgeConnectionError(
+                    error_code="connection-timeout",
+                    message=str(e),
+                )
+            else:  # ValueError
+                error = SplurgeSqlError(
+                    error_code="invalid-connection-string",
+                    message=str(e),
+                )
+            raise error from e
 
-    @handle_exceptions(
-        exceptions={
-            ValueError: (SplurgeSqlError, "execution-syntax-error"),
-            RuntimeError: (SplurgeQueryError, "execution-failed"),
-        },
-        log_level="warning",
-        reraise=True,
-        include_traceback=False,  # Don't include stack traces in examples
-    )
     def execute_query(self, query: str, parameters: list[Any] | None = None) -> list[dict[str, Any]]:
         """Execute SQL query with error handling and context.
 
@@ -196,37 +194,51 @@ class DatabaseClient:
         Returns:
             Query results
         """
-        if not self.connection:
-            raise SplurgeConnectionError(error_code="not-connected", message="No active database connection")
+        try:
+            if not self.connection:
+                raise SplurgeConnectionError(error_code="not-connected", message="No active database connection")
 
-        # SQL validation - raise domain-specific exceptions directly
-        if not query.strip():
-            raise SplurgeSqlError(error_code="empty-query", message="Query cannot be empty")
+            # SQL validation - raise domain-specific exceptions directly
+            if not query.strip():
+                raise SplurgeSqlError(error_code="empty-query", message="Query cannot be empty")
 
-        # Check for dangerous operations
-        dangerous_patterns = [
-            r"\bDROP\s+TABLE\b",
-            r"\bDELETE\s+FROM\s+\w+\s*$",
-            r"\bTRUNCATE\b",
-        ]
+            # Check for dangerous operations
+            dangerous_patterns = [
+                r"\bDROP\s+TABLE\b",
+                r"\bDELETE\s+FROM\s+\w+\s*$",
+                r"\bTRUNCATE\b",
+            ]
 
-        for pattern in dangerous_patterns:
-            if re.search(pattern, query, re.IGNORECASE):
-                raise SplurgeSqlError(
-                    error_code="dangerous-operation",
-                    message="Dangerous SQL operation detected",
-                    details={"pattern": pattern, "query": query},
+            for pattern in dangerous_patterns:
+                if re.search(pattern, query, re.IGNORECASE):
+                    raise SplurgeSqlError(
+                        error_code="dangerous-operation",
+                        message="Dangerous SQL operation detected",
+                        details={"pattern": pattern, "query": query},
+                    )
+
+            # Simulate query execution
+            if "INVALID" in query.upper():
+                raise ValueError("Invalid SQL syntax")
+
+            if "TIMEOUT" in query.upper():
+                raise RuntimeError("Query execution timeout")
+
+            # Return mock results
+            return [{"id": 1, "name": "Sample", "value": 42}]
+        except (ValueError, RuntimeError) as e:
+            error: SplurgeError
+            if isinstance(e, ValueError):
+                error = SplurgeSqlError(
+                    error_code="execution-syntax-error",
+                    message=str(e),
                 )
-
-        # Simulate query execution
-        if "INVALID" in query.upper():
-            raise ValueError("Invalid SQL syntax")
-
-        if "TIMEOUT" in query.upper():
-            raise RuntimeError("Query execution timeout")
-
-        # Return mock results
-        return [{"id": 1, "name": "Sample", "value": 42}]
+            else:  # RuntimeError
+                error = SplurgeQueryError(
+                    error_code="execution-failed",
+                    message=str(e),
+                )
+            raise error from e
 
     def batch_execute(self, queries: list[str]) -> list[list[dict[str, Any]]]:
         """Execute multiple queries in a transaction.
@@ -249,18 +261,28 @@ class DatabaseClient:
             print(f"  - Query failed: {self.formatter.format_error(exc, include_context=True)}")
 
         for i, query in enumerate(queries):
-            with error_context(
-                exceptions={
-                    ValueError: (SplurgeSqlError, "invalid-syntax"),
-                    RuntimeError: (SplurgeQueryError, "execution-failed"),
-                },
-                context={"batch_index": i, "query": query[:50]},
-                on_success=handle_query_success,
-                on_error=handle_query_error,
-                suppress=False,
-            ):
+            try:
                 result = self.execute_query(query)
                 results.append(result)
+                handle_query_success()
+            except (ValueError, RuntimeError) as e:
+                error: SplurgeError
+                if isinstance(e, ValueError):
+                    error = SplurgeSqlError(
+                        error_code="invalid-syntax",
+                        message=str(e),
+                    )
+                else:  # RuntimeError
+                    error = SplurgeQueryError(
+                        error_code="execution-failed",
+                        message=str(e),
+                    )
+                error.attach_context(
+                    batch_index=i,
+                    query=query[:50],
+                )
+                handle_query_error(error)
+                raise error from e
 
         return results
 
@@ -334,14 +356,6 @@ class DataProcessor:
         }
         return type_map.get(type_name, object)
 
-    @handle_exceptions(
-        exceptions={
-            json.JSONDecodeError: (SplurgeFormatError, "json-parse-error"),
-            UnicodeDecodeError: (SplurgeEncodingError, "encoding-error"),
-            ValueError: (SplurgeValidationError, "validation-error"),
-        },
-        log_level="warning",
-    )
     def load_json_file(self, file_path: str) -> dict[str, Any]:
         """Load and validate JSON file.
 
@@ -356,7 +370,26 @@ class DataProcessor:
                 content = f.read()
 
                 # Parse JSON
-                data = json.loads(content)
+                try:
+                    data = json.loads(content)
+                except json.JSONDecodeError as e:
+                    error = SplurgeFormatError(
+                        error_code="json-parse-error",
+                        message=str(e),
+                    )
+                    raise error from e
+                except UnicodeDecodeError as e:
+                    error = SplurgeEncodingError(
+                        error_code="encoding-error",
+                        message=str(e),
+                    )
+                    raise error from e
+                except ValueError as e:
+                    error = SplurgeValidationError(
+                        error_code="validation-error",
+                        message=str(e),
+                    )
+                    raise error from e
 
                 # Validate structure
                 if not isinstance(data, dict):
@@ -369,9 +402,9 @@ class DataProcessor:
                 return data
 
         except FileNotFoundError as e:
-            raise wrap_exception(
-                e, SplurgeOSError, error_code="file-not-found", context={"file_path": file_path}
-            ) from e
+            error = SplurgeOSError(error_code="file-not-found", message=f"File not found: {file_path}")
+            error.attach_context({"file_path": file_path})
+            raise error from e
 
     def process_csv_data(self, csv_content: str, delimiter: str = ",") -> list[dict[str, Any]]:
         """Process CSV data with comprehensive error handling.
@@ -391,9 +424,11 @@ class DataProcessor:
         try:
             header = [field.strip() for field in lines[0].split(delimiter)]
         except Exception as e:
-            raise wrap_exception(
-                e, SplurgeFormatError, error_code="invalid-csv-header", context={"delimiter": delimiter}
-            ) from e
+            error = SplurgeFormatError(
+                error_code="invalid-csv-header", message=f"Failed to parse CSV header with delimiter '{delimiter}'"
+            )
+            error.attach_context({"delimiter": delimiter})
+            raise error from e
 
         results = []
 
@@ -404,31 +439,35 @@ class DataProcessor:
             if not line.strip():
                 continue  # Skip empty lines
 
-            with error_context(
-                exceptions={
-                    ValueError: (SplurgeFormatError, "invalid-csv-row"),
-                    IndexError: (SplurgeFormatError, "csv-field-mismatch"),
-                },
-                context={"row_number": i, "line": line[:50]},
-                on_error=handle_row_error,
-                suppress=True,  # Continue processing other rows
-            ):
-                try:
-                    values = [field.strip() for field in line.split(delimiter)]
+            try:
+                values = [field.strip() for field in line.split(delimiter)]
 
-                    if len(values) != len(header):
-                        raise SplurgeFormatError(
-                            error_code="field-count-mismatch",
-                            message=f"Row has {len(values)} fields, expected {len(header)}",
-                            details={"row": i, "expected": len(header), "actual": len(values)},
-                        )
+                if len(values) != len(header):
+                    raise SplurgeFormatError(
+                        error_code="field-count-mismatch",
+                        message=f"Row has {len(values)} fields, expected {len(header)}",
+                        details={"row": i, "expected": len(header), "actual": len(values)},
+                    )
 
-                    row_data = dict(zip(header, values, strict=False))
-                    results.append(row_data)
+                row_data = dict(zip(header, values, strict=False))
+                results.append(row_data)
 
-                except Exception:
-                    # This row will be skipped due to suppress=True
-                    pass
+            except (ValueError, IndexError) as e:
+                error: SplurgeError
+                if isinstance(e, ValueError):
+                    error = SplurgeFormatError(
+                        error_code="invalid-csv-row",
+                        message=str(e),
+                    )
+                else:  # IndexError
+                    error = SplurgeFormatError(
+                        error_code="csv-field-mismatch",
+                        message=str(e),
+                    )
+                error.attach_context(row_number=i, line=line[:50])
+                handle_row_error(error)
+                # Continue processing other rows (skip this one)
+                continue
 
         return results
 

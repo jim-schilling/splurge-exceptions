@@ -8,15 +8,15 @@ and this project adheres to [Calendar Versioning](https://calver.org/).
 ## [2025.0.1] - 2025-10-24
 
 ### Changed
-- `SplurgeError` signature updated to have `error_code` as a positional parameter with a default value = "generic".
 - `SplurgeError` constructor signature updated to keyword-only arguments after `error_code`.
-- `wrap_exception` function signature update to keyword-only arguments after `target_exception_type`, with `error_code` having a default value = "generic".
 - Updated all relevant documentation (API reference, detailed README) to reflect all changes for this feature branch.
 
 ### Removed
 - `recoverable` parameter from `SplurgeError` constructor.
 - `is_recoverable()` property from `SplurgeError`.
 - `_recoverable` internal attribute from `SplurgeError`.
+- All references to recoverability in documentation.
+- `wrap_exception()` has been removed from public API and documentation.
 
 ## [2025.0.0] - 2025-10-23
 

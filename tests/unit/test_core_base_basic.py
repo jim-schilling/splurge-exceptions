@@ -5,7 +5,7 @@ DOMAINS: ["core", "base"]
 
 import pytest
 
-from splurge_exceptions import SplurgeError
+from splurge_exceptions import SplurgeError, SplurgeSubclassError
 
 
 # Test exception for base class testing
@@ -32,13 +32,11 @@ class TestSplurgeErrorInstantiation:
             error_code="test-error",
             message="Test error",
             details=details,
-            severity="error",
         )
 
         assert error.error_code == "test-error"
         assert error.message == "Test error"
         assert error.details == details
-        assert error.severity == "error"
 
     def test_instantiation_with_default_values(self) -> None:
         """Test instantiation with default values."""
@@ -47,28 +45,16 @@ class TestSplurgeErrorInstantiation:
         assert error.error_code == "test-error"
         assert error.message is None
         assert error.details == {}
-        assert error.severity == "error"
-
-    def test_invalid_severity_raises_error(self) -> None:
-        """Test that invalid severity raises ValueError."""
-        with pytest.raises(ValueError, match="Invalid severity"):
-            DummyException(error_code="test-error", severity="invalid")
-
-    def test_severity_levels(self) -> None:
-        """Test all valid severity levels."""
-        for severity in ["info", "warning", "error", "critical"]:
-            error = DummyException(error_code="test-error", severity=severity)
-            assert error.severity == severity
 
     def test_missing_domain_raises_error(self) -> None:
-        """Test that using SplurgeError without _domain raises TypeError."""
-        with pytest.raises(TypeError, match="must define _domain"):
+        """Test that using SplurgeError without _domain raises SplurgeSubclassError."""
+        with pytest.raises(SplurgeSubclassError, match="must define _domain"):
             SplurgeError(error_code="test-error")
 
     def test_invalid_error_code_format_raises_error(self) -> None:
-        """Test that invalid error code format raises ValueError."""
+        """Test that invalid error code format raises SplurgeSubclassError."""
         # Error codes must start with lowercase letter
-        with pytest.raises(ValueError, match="Invalid error_code"):
+        with pytest.raises(SplurgeSubclassError, match="Invalid error_code"):
             DummyException(error_code="Invalid-code")
 
     def test_error_code_with_hyphens(self) -> None:
@@ -80,6 +66,114 @@ class TestSplurgeErrorInstantiation:
         """Test that error codes can contain numbers."""
         error = DummyException(error_code="error-42")
         assert error.error_code == "error-42"
+
+    def test_empty_error_code_raises_error(self) -> None:
+        """Test that empty error code raises SplurgeSubclassError (line 138)."""
+        with pytest.raises(SplurgeSubclassError, match="error_code cannot be empty"):
+            DummyException(error_code="")
+
+    def test_error_code_starting_with_uppercase_raises_error(self) -> None:
+        """Test that error code starting with uppercase raises SplurgeSubclassError."""
+        with pytest.raises(SplurgeSubclassError, match="Invalid error_code"):
+            DummyException(error_code="InvalidCode")
+
+    def test_error_code_starting_with_digit_raises_error(self) -> None:
+        """Test that error code starting with digit raises SplurgeSubclassError."""
+        with pytest.raises(SplurgeSubclassError, match="Invalid error_code"):
+            DummyException(error_code="123-error")
+
+    def test_error_code_with_underscore_raises_error(self) -> None:
+        """Test that error code with underscore raises SplurgeSubclassError."""
+        with pytest.raises(SplurgeSubclassError, match="Invalid error_code"):
+            DummyException(error_code="invalid_code")
+
+    def test_error_code_with_dot_raises_error(self) -> None:
+        """Test that error code with dot raises SplurgeSubclassError."""
+        with pytest.raises(SplurgeSubclassError, match="Invalid error_code"):
+            DummyException(error_code="invalid.code")
+
+    def test_error_code_with_spaces_raises_error(self) -> None:
+        """Test that error code with spaces raises SplurgeSubclassError."""
+        with pytest.raises(SplurgeSubclassError, match="Invalid error_code"):
+            DummyException(error_code="invalid code")
+
+
+class TestSplurgeErrorDomainValidation:
+    """Test domain validation for error codes."""
+
+    def test_empty_domain_raises_error(self) -> None:
+        """Test that empty domain raises SplurgeSubclassError (line 157)."""
+        with pytest.raises(SplurgeSubclassError, match="_domain cannot be empty"):
+
+            class BrokenError(SplurgeError):
+                _domain = ""
+
+            BrokenError(error_code="test")
+
+    def test_domain_with_empty_components_raises_error(self) -> None:
+        """Test that domain with empty components raises SplurgeSubclassError (line 163)."""
+        with pytest.raises(SplurgeSubclassError, match="_domain cannot have empty components"):
+
+            class BrokenError(SplurgeError):
+                _domain = "database..query"
+
+            BrokenError(error_code="test")
+
+    def test_domain_with_invalid_component_raises_error(self) -> None:
+        """Test that domain with invalid component raises SplurgeSubclassError (line 165)."""
+        with pytest.raises(SplurgeSubclassError, match="Invalid _domain.*Each component must match"):
+
+            class BrokenError(SplurgeError):
+                _domain = "database.INVALID.query"
+
+            BrokenError(error_code="test")
+
+    def test_domain_component_starting_with_digit_raises_error(self) -> None:
+        """Test that domain component starting with digit raises SplurgeSubclassError."""
+        with pytest.raises(SplurgeSubclassError, match="Invalid _domain"):
+
+            class BrokenError(SplurgeError):
+                _domain = "database.123.query"
+
+            BrokenError(error_code="test")
+
+    def test_domain_component_with_underscore_raises_error(self) -> None:
+        """Test that domain component with underscore raises SplurgeSubclassError."""
+        with pytest.raises(SplurgeSubclassError, match="Invalid _domain"):
+
+            class BrokenError(SplurgeError):
+                _domain = "database.sql_query.operations"
+
+            BrokenError(error_code="test")
+
+    def test_domain_ending_with_hyphen_raises_error(self) -> None:
+        """Test that domain component ending with hyphen raises SplurgeSubclassError."""
+        with pytest.raises(SplurgeSubclassError, match="Invalid _domain"):
+
+            class BrokenError(SplurgeError):
+                _domain = "database-.sql.query"
+
+            BrokenError(error_code="test")
+
+    def test_valid_hierarchical_domain_works(self) -> None:
+        """Test that valid hierarchical domain works correctly."""
+
+        class WorkingError(SplurgeError):
+            _domain = "database.sql.query"
+
+        error = WorkingError(error_code="timeout")
+        assert error.domain == "database.sql.query"
+        assert error.full_code == "database.sql.query.timeout"
+
+    def test_single_component_domain_works(self) -> None:
+        """Test that single component domain works correctly."""
+
+        class WorkingError(SplurgeError):
+            _domain = "database"
+
+        error = WorkingError(error_code="connection-failed")
+        assert error.domain == "database"
+        assert error.full_code == "database.connection-failed"
 
 
 class TestSplurgeErrorStringRepresentation:
@@ -125,12 +219,12 @@ class TestSplurgeErrorStringRepresentation:
         error = DummyException(
             error_code="test-error",
             message="Test error",
-            severity="error",
         )
         repr_str = repr(error)
 
         assert "DummyException" in repr_str
         assert "error_code='test-error'" in repr_str
+        assert "message='Test error'" in repr_str
         assert "message='Test error'" in repr_str
 
     def test_full_code_property(self) -> None:

@@ -1,12 +1,26 @@
-"""Base exception class for Splurge Exceptions Framework.
+"""Core base exception implementation for splurge-exceptions.
 
-DOMAINS: ["exceptions", "core"]
+This module provides the :class:`SplurgeError` base class which is the
+foundation for all semantic exceptions in the Splurge ecosystem. Subclasses
+declare a class-level ``_domain`` value and supply an ``error_code`` when
+instantiated. The combination of ``_domain`` and ``error_code`` forms the
+full hierarchical error code used for logging, telemetry, and user-facing
+messages.
+
+Example:
+
+    class SplurgeSqlError(SplurgeError):
+        _domain = "splurge.sql"
+
+    err = SplurgeSqlError(error_code="invalid-column", message="Missing column")
+    print(err.full_code)  # -> "splurge.sql.invalid-column"
+
 """
 
 import re
 from typing import Any
 
-__all__ = ["SplurgeError"]
+__all__ = ["SplurgeError", "SplurgeSubclassError"]
 
 # Pattern for valid domain and error code components
 # Must start with lowercase letter, contain only lowercase letters, digits, and hyphens,
@@ -19,54 +33,62 @@ VALID_COMPONENT_PATTERN = re.compile(r"^[a-z][a-z0-9\-]*[a-z0-9]$")
 VALID_HIERARCHICAL_PATTERN = re.compile(r"^[a-z][a-z0-9\-\.]*[a-z0-9]$")
 
 
-class SplurgeError(Exception):
-    """Base exception for all Splurge errors.
+class SplurgeSubclassError(Exception):
+    """Raised when a SplurgeError subclass is misconfigured.
 
-    This is the root exception class for the Splurge exception framework. All
-    framework-specific exceptions inherit from this class and must define a
-    _domain class attribute.
+    This exception indicates that a subclass of SplurgeError has a missing or
+    invalid ``_domain`` class attribute, or that an invalid ``error_code`` or
+    ``_domain`` value was provided that doesn't match required patterns.
 
-    The _domain attribute forms the hierarchical prefix for error codes.
-    For example, a class with _domain="database.sql.query" combined with
-    error_code="invalid-column" produces the full code:
-    "database.sql.query.invalid-column"
-
-    Attributes:
-        _domain: Hierarchical domain identifier (e.g., "database.sql.query")
-        error_code: User-defined semantic error identifier (e.g., "invalid-column")
-        message: Human-readable error message
-        details: Additional error details/context
-        severity: Error severity level (info, warning, error, critical)
+    This is a framework-level error and should only occur during development or
+    testing if exception subclasses are defined incorrectly. In production,
+    properly defined exception classes should never raise this.
 
     Example:
-        >>> class SplurgeSqlQueryError(SplurgeError):
-        ...     _domain = "database.sql.query"
-        >>> error = SplurgeSqlQueryError(
-        ...     error_code="column-not-found",
-        ...     message="Column 'user_id' does not exist"
-        ... )
-        >>> print(error.full_code)
-        database.sql.query.column-not-found
+
+        class BrokenError(SplurgeError):
+            pass  # Missing _domain!
+
+        try:
+            BrokenError(error_code="test")
+        except SplurgeSubclassError as e:
+            print(f"Exception definition error: {e}")
     """
 
-    # Severity levels
-    SEVERITY_INFO = "info"
-    SEVERITY_WARNING = "warning"
-    SEVERITY_ERROR = "error"
-    SEVERITY_CRITICAL = "critical"
+    pass
 
-    VALID_SEVERITIES = {SEVERITY_INFO, SEVERITY_WARNING, SEVERITY_ERROR, SEVERITY_CRITICAL}
+
+class SplurgeError(Exception):
+    """Base class for all Splurge exceptions.
+
+    All Splurge exception types should inherit from this class and define a
+    class-level ``_domain`` string. When an instance is created the provided
+    ``error_code`` is validated and combined with ``_domain`` to form
+    ``full_code`` (``{domain}.{error_code}``).
+
+    Attributes:
+        _domain (str): Hierarchical domain identifier that subclasses must set.
+
+    Example:
+
+        class SplurgeSqlQueryError(SplurgeError):
+            _domain = "database.sql.query"
+
+        error = SplurgeSqlQueryError(error_code="column-not-found",
+                                     message="Column 'user_id' does not exist")
+        print(error.full_code)  # "database.sql.query.column-not-found"
+
+    """
 
     # Must be overridden by subclasses
     _domain: str
 
     def __init__(
         self,
-        error_code: str = "generic",
+        error_code: str,
         *,
         message: str | None = None,
         details: dict[str, Any] | None = None,
-        severity: str = "error",
     ) -> None:
         """Initialize SplurgeError.
 
@@ -74,15 +96,14 @@ class SplurgeError(Exception):
             error_code: User-defined semantic error identifier (e.g., "invalid-column")
             message: Human-readable error message
             details: Additional error details/context
-            severity: Error severity level (info, warning, error, critical)
 
         Raises:
-            TypeError: If _domain is not defined on the class
-            ValueError: If error_code or _domain don't match pattern, or severity is invalid
+            SplurgeSubclassError: If _domain is not defined or if error_code/_domain
+                don't match required patterns.
         """
         # Verify _domain is defined
         if not hasattr(self.__class__, "_domain"):
-            raise TypeError(f"{self.__class__.__name__} must define _domain class attribute")
+            raise SplurgeSubclassError(f"{self.__class__.__name__} must define _domain class attribute")
 
         # Validate error_code
         self._validate_error_code(error_code)
@@ -90,14 +111,9 @@ class SplurgeError(Exception):
         # Validate _domain
         self._validate_domain(self._domain)
 
-        # Validate severity
-        if severity not in self.VALID_SEVERITIES:
-            raise ValueError(f"Invalid severity: {severity}. Must be one of {self.VALID_SEVERITIES}")
-
         self._error_code = error_code
         self._message = message
         self._details = details or {}
-        self._severity = severity
         self._context: dict[str, Any] = {}
         self._suggestions: list[str] = []
 
@@ -116,13 +132,13 @@ class SplurgeError(Exception):
             error_code: Error code to validate (e.g., "invalid-column", "timeout")
 
         Raises:
-            ValueError: If error_code doesn't match pattern
+            SplurgeSubclassError: If error_code doesn't match pattern.
         """
         if not error_code:
-            raise ValueError("error_code cannot be empty")
+            raise SplurgeSubclassError("error_code cannot be empty")
 
         if not VALID_COMPONENT_PATTERN.match(error_code):
-            raise ValueError(
+            raise SplurgeSubclassError(
                 f"Invalid error_code '{error_code}'. Must match pattern "
                 "[a-z][a-z0-9-]*[a-z0-9] (e.g., 'invalid-column', 'timeout')"
             )
@@ -135,18 +151,18 @@ class SplurgeError(Exception):
             domain: Domain to validate
 
         Raises:
-            ValueError: If domain doesn't match pattern
+            SplurgeSubclassError: If domain doesn't match pattern.
         """
         if not domain:
-            raise ValueError("_domain cannot be empty")
+            raise SplurgeSubclassError("_domain cannot be empty")
 
         # Split on dots and validate each component
         components = domain.split(".")
         for component in components:
             if not component:
-                raise ValueError("_domain cannot have empty components (e.g., 'a..b')")
+                raise SplurgeSubclassError("_domain cannot have empty components (e.g., 'a..b')")
             if not VALID_COMPONENT_PATTERN.match(component):
-                raise ValueError(
+                raise SplurgeSubclassError(
                     f"Invalid _domain '{domain}'. Each component must match pattern "
                     "[a-z][a-z0-9-]*[a-z0-9] (e.g., 'database.sql.query')"
                 )
@@ -214,15 +230,6 @@ class SplurgeError(Exception):
         """
         return self._details.copy()
 
-    @property
-    def severity(self) -> str:
-        """Get the error severity level.
-
-        Returns:
-            One of: info, warning, error, critical.
-        """
-        return self._severity
-
     def get_full_message(self) -> str:
         """Get full message including code, message, and details.
 
@@ -253,6 +260,12 @@ class SplurgeError(Exception):
         """Attach context data to the exception.
 
         Can be called with either (key, value) pair or a dictionary.
+
+        Note:
+            This method is not thread-safe. Exceptions should typically be
+            populated with context in a single thread before being raised.
+            If exceptions are shared between threads, external synchronization
+            is required.
 
         Args:
             key: Context key (ignored if context_dict is provided)
@@ -327,6 +340,12 @@ class SplurgeError(Exception):
     def add_suggestion(self, suggestion: str) -> "SplurgeError":
         """Add a recovery suggestion.
 
+        Note:
+            This method is not thread-safe. Exceptions should typically be
+            populated with suggestions in a single thread before being raised.
+            If exceptions are shared between threads, external synchronization
+            is required.
+
         Args:
             suggestion: Recovery suggestion text
 
@@ -374,8 +393,6 @@ class SplurgeError(Exception):
         if self._details:
             args.append(f"details={self._details!r}")
 
-        args.append(f"severity={self._severity!r}")
-
         return f"{self.__class__.__name__}({', '.join(args)})"
 
     def __str__(self) -> str:
@@ -391,8 +408,8 @@ class SplurgeError(Exception):
 
         The default Exception pickling uses the instance args (which are the
         formatted message). SplurgeError requires structured constructor
-        arguments (error_code, message, details, severity), so implement
-        __reduce__ to ensure correct round-trip and preserve context/suggestions.
+        arguments (error_code, message, details), so implement __reduce__
+        to ensure correct round-trip and preserve context/suggestions.
 
         Returns a tuple of (callable, args, state) where:
         - callable: The class constructor
@@ -402,7 +419,6 @@ class SplurgeError(Exception):
         state = {
             "message": self._message,
             "details": self._details,
-            "severity": self._severity,
             "_context": self._context,
             "_suggestions": self._suggestions,
         }
@@ -420,12 +436,10 @@ class SplurgeError(Exception):
         # Restore keyword arguments from the state
         message = state.get("message")
         details = state.get("details", {})
-        severity = state.get("severity", "error")
 
         # Update instance with these values
         self._message = message
         self._details = details if isinstance(details, dict) else {}
-        self._severity = severity
 
         # Restore context and suggestions
         ctx = state.get("_context")

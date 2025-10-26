@@ -27,78 +27,51 @@ Splurge Exceptions is a modern Python exception framework designed to provide:
 
 ### Core Exception Classes
 
-Splurge Exceptions provides 6 specialized exception classes, each with its own domain:
+Splurge Exceptions provides 8 semantic exception classes plus a framework misconfiguration class:
 
 | Exception Class | Domain | Purpose |
 |-----------------|--------|---------|
-| `SplurgeValueError` | `value` | Input validation and data validation errors |
-| `SplurgeOSError` | `os` | Operating system and file system errors |
-| `SplurgeLookupError` | `lookup` | Lookup and search failures |
-| `SplurgeRuntimeError` | `runtime` | Runtime execution errors |
-| `SplurgeTypeError` | `type` | Type validation and conversion errors |
-| `SplurgeAttributeError` | `attribute` | Attribute access and existence errors |
-| `SplurgeImportError` | `import` | Module and import-related errors |
-| `SplurgeFrameworkError` | `framework` | Framework-level errors and extensions |
+| `SplurgeValueError` | `splurge.value` | Input validation and data validation errors |
+| `SplurgeOSError` | `splurge.os` | Operating system and file system errors |
+| `SplurgeLookupError` | `splurge.lookup` | Lookup and search failures |
+| `SplurgeRuntimeError` | `splurge.runtime` | Runtime execution errors |
+| `SplurgeTypeError` | `splurge.type` | Type validation and conversion errors |
+| `SplurgeAttributeError` | `splurge.attribute` | Attribute access and existence errors |
+| `SplurgeImportError` | `splurge.import` | Module and import-related errors |
+| `SplurgeFrameworkError` | `splurge.framework` | Framework-level errors and extensions |
+| `SplurgeSubclassError` | (framework) | Raised when a SplurgeError subclass is misconfigured |
 
 ### Exception Features
 
 - **Semantic Error Codes**: User-defined codes like `"invalid-value"`, `"file-not-found"`
-- **Hierarchical Domains**: Structured error organization (`value.invalid-email`)
+- **Hierarchical Domains**: Structured error organization (`splurge.value.invalid-email`)
 - **Context Attachment**: Add operation context, user data, timestamps
 - **Recovery Suggestions**: Provide actionable error resolution guidance
-- **Severity Levels**: Info, warning, error, critical classifications
-- **Exception Chaining**: Preserve original exception context via `__cause__`
+- **Exception Chaining**: Preserve original exception context via `raise ... from`
 
-### Exception Management Tools
+### Exception Management with Explicit Patterns
 
-#### Exception Wrapping (`wrap_exception`)
+#### Manual Exception Conversion
 Convert any standard library or third-party exception to a structured Splurge exception:
 
 ```python
-from splurge_exceptions import wrap_exception, SplurgeValueError
+from splurge_exceptions import SplurgeValueError
 
 try:
     # Some operation that might fail
     int("invalid")
 except ValueError as e:
-    wrapped = wrap_exception(
-        e,
-        SplurgeValueError,
+    # Wrap the exception with explicit try/except
+    wrapped = SplurgeValueError(
         error_code="invalid-integer",
         message="Could not parse input as integer",
-        context={"input": "invalid", "expected_type": "int"}
+        details={"input": "invalid", "expected_type": "int"}
     )
-    raise wrapped
-```
-
-#### Context Managers (`error_context`)
-Handle exceptions with automatic conversion and context attachment:
-
-```python
-from splurge_exceptions import error_context, SplurgeValueError
-
-with error_context(
-    exceptions={ValueError: (SplurgeValueError, "invalid-value")},
-    context={"operation": "user_validation", "field": "email"},
-    on_success=lambda: print("Validation successful"),
-    on_error=lambda e: print(f"Validation failed: {e}")
-):
-    validate_email(user_input)
-```
-
-#### Decorators (`handle_exceptions`)
-Automatically convert exceptions on function calls:
-
-```python
-from splurge_exceptions import handle_exceptions, SplurgeOSError
-
-@handle_exceptions(
-    exceptions={FileNotFoundError: (SplurgeOSError, "file-not-found")},
-    log_level="error"
-)
-def read_config_file(path: str) -> str:
-    with open(path) as f:
-        return f.read()
+    wrapped.attach_context({
+        "operation": "parse_integer",
+        "input_value": "invalid"
+    })
+    raise wrapped from e
 ```
 
 #### Error Formatting (`ErrorMessageFormatter`)
@@ -151,57 +124,30 @@ error.attach_context("user_id", 12345)
 error.add_suggestion("Use format: username@domain.com")
 error.add_suggestion("Check for missing domain part")
 
-print(error.full_code)  # "value.invalid-email"
+print(error.full_code)  # "splurge.value.invalid-email"
 ```
 
-#### 2. Exception Wrapping
+#### 2. Exception Conversion with Chaining
 
 ```python
-from splurge_exceptions import wrap_exception, SplurgeValueError
+from splurge_exceptions import SplurgeValueError
 
 try:
     # Some validation that might fail
     validate_user_data({"email": "invalid-email"})
 except ValueError as original_error:
-    # Wrap with structured exception
-    structured_error = wrap_exception(
-        original_error,
-        SplurgeValueError,
+    # Create structured exception and chain original
+    structured_error = SplurgeValueError(
         error_code="user-validation-failed",
-        context={"operation": "user_registration"}
+        message="User validation failed"
     )
-    raise structured_error
+    structured_error.attach_context({
+        "operation": "user_registration"
+    })
+    raise structured_error from original_error
 ```
 
-#### 3. Context Manager Pattern
-
-```python
-from splurge_exceptions import error_context, SplurgeOSError
-
-with error_context(
-    exceptions={FileNotFoundError: (SplurgeOSError, "config-file-missing")},
-    context={"config_path": "/etc/app/config.json"}
-):
-    load_configuration()
-```
-
-#### 4. Decorator Pattern
-
-```python
-from splurge_exceptions import handle_exceptions, SplurgeRuntimeError
-
-@handle_exceptions(
-    exceptions={
-        ConnectionError: (SplurgeRuntimeError, "database-unavailable"),
-        TimeoutError: (SplurgeRuntimeError, "database-timeout")
-    }
-)
-def fetch_user_data(user_id: int) -> dict:
-    # Database operations that might fail
-    return db.query("SELECT * FROM users WHERE id = ?", [user_id])
-```
-
-#### 5. Error Formatting
+#### 3. Error Formatting
 
 ```python
 from splurge_exceptions import ErrorMessageFormatter
@@ -216,6 +162,8 @@ except Exception as e:
     print(user_message)
 ```
 
+#### 4. Error Formatting with Context and Suggestions
+
 ## Core Concepts
 
 ### Error Code System
@@ -227,12 +175,13 @@ domain.semantic-error-code
 ```
 
 **Examples:**
-- `value.invalid-email` - Value domain, invalid email error
-- `os.file-not-found` - OS domain, file not found error
+- `splurge.value.invalid-email` - Splurge > Value domain, invalid email error
+- `splurge.os.file-not-found` - Splurge > OS domain, file not found error
 - `database.connection.timeout` - Database > Connection domain, timeout error
 
 **Domain Hierarchy Rules:**
-- Domains can be single level (`value`) or hierarchical (`database.sql.query`)
+- Built-in Splurge exceptions use `splurge.*` prefix (e.g., `splurge.value`, `splurge.os`)
+- User-defined domains should use library/namespace prefix (e.g., `database.sql.query`, `mylib.validation`)
 - Each domain component must match: `[a-z][a-z0-9-]*[a-z0-9]`
 - User error codes cannot contain dots
 
@@ -287,6 +236,7 @@ suggestions = error.get_suggestions()
 
 ```
 Exception
+└── SplurgeSubclassError (internal framework misconfiguration)
 └── SplurgeError (base class)
     ├── SplurgeValueError (domain: "value")
     ├── SplurgeOSError (domain: "os")
@@ -303,13 +253,14 @@ Exception
 
 ### Application-Level Usage
 
-For end-user applications consuming libraries:
+**For end-user applications** consuming libraries, use the built-in semantic exception types for convenience:
 
 ```python
 # Import what you need
 from splurge_exceptions import (
-    SplurgeValueError,
-    SplurgeOSError,
+    SplurgeValueError,        # Input/data validation errors
+    SplurgeOSError,           # File/OS errors  
+    SplurgeRuntimeError,      # Runtime execution errors
     error_context,
     ErrorMessageFormatter
 )
@@ -323,46 +274,99 @@ except SplurgeValueError as e:
     print(formatter.format_error(e, include_suggestions=True))
 except SplurgeOSError as e:
     print(f"System Error: {e.error_code}")
+
+# Raise built-in types for simple cases
+if not user_email:
+    raise SplurgeValueError(
+        error_code="required-field",
+        message="Email is required",
+        details={"field": "email"}
+    )
 ```
 
-### Library-Level Usage
+**Key Points for Applications:**
+- Use the built-in `Splurge*Error` types for quick, semantic error handling
+- Stack traces clearly show error types (e.g., `SplurgeValueError`)
+- Type checking with `except SplurgeValueError` works naturally
+- Full code includes `splurge.*` prefix for easy filtering in logs
 
-For libraries providing services to applications:
+### Library-Level Usage (RECOMMENDED)
+
+**For libraries providing services**, define your own exception hierarchy to make error origins explicit:
 
 ```python
-from splurge_exceptions import SplurgeValueError, wrap_exception
+from splurge_exceptions import SplurgeFrameworkError
 
-class UserService:
-    def validate_email(self, email: str) -> bool:
-        if "@" not in email:
-            raise SplurgeValueError(
-                error_code="invalid-email-format",
-                message="Email must contain @ symbol",
-                details={"provided": email}
-            )
-        return True
+# Step 1: Define your library's base exception
+class SplurgeSafeIoError(SplurgeFrameworkError):
+    """Base exception for SplurgeSafeIo library."""
+    _domain = "splurge-safe-io"
 
-    def create_user(self, user_data: dict) -> int:
-        # Wrap third-party library errors
+# Step 2: Define domain-specific error types
+class SplurgeSafeIoValidationError(SplurgeSafeIoError):
+    """Validation errors in SplurgeSafeIo."""
+    _domain = "splurge-safe-io.validation"
+
+class SplurgeSafeIoConnectionError(SplurgeSafeIoError):
+    """Connection errors in SplurgeSafeIo."""
+    _domain = "splurge-safe-io.connection"
+
+class SplurgeSafeIoRuntimeError(SplurgeSafeIoError):
+    """Runtime/unexpected errors in SplurgeSafeIo."""
+    _domain = "splurge-safe-io.runtime"
+
+# Step 3: Use your library's exceptions
+class FileService:
+    def read_config(self, path: str) -> dict:
         try:
-            external_validator.validate(user_data)
-        except ValueError as e:
-            raise wrap_exception(
-                e,
-                SplurgeValueError,
-                error_code="external-validation-failed",
-                context={"validator": "external_lib"}
-            ) from e
-
-        # Your business logic here
-        return save_to_database(user_data)
+            with open(path) as f:
+                return json.load(f)
+        except FileNotFoundError as e:
+            error = SplurgeSafeIoRuntimeError(
+                error_code="config-not-found",
+                message=f"Configuration file not found: {path}"
+            )
+            error.__cause__ = e
+            error.attach_context({"path": path})
+            raise error
+        except json.JSONDecodeError as e:
+            error = SplurgeSafeIoValidationError(
+                error_code="invalid-json",
+                message=f"Configuration file contains invalid JSON"
+            )
+            error.__cause__ = e
+            error.attach_context({"path": path})
+            raise error
 ```
+
+**Results with library-specific exceptions:**
+- Full error code: `splurge-safe-io.validation.invalid-json` (origin is clear!)
+- Type checking: `except SplurgeSafeIoValidationError` (specific and type-safe)
+- Log filtering: Easy to find all `splurge-safe-io.*` errors
+- Caller clarity: Knows exactly which library threw the error
+
+**Key Points for Libraries:**
+- ✅ **DO** define your own exception hierarchy inheriting from `SplurgeFrameworkError`
+- ✅ **DO** use your library name/prefix in domains (e.g., `splurge-safe-io`)
+- ✅ **DO** create semantic sub-types for different error categories
+- ❌ **DON'T** use the built-in `Splurge*Error` types (they're for apps, not libraries)
+- ❌ **DON'T** use bare `SplurgeError` or `SplurgeRuntimeError` from your library
+
+### When to Use Which Approach
+
+| Use Case | Exception Type | Example |
+|----------|---|---------|
+| Simple app-level error | `SplurgeValueError` | Missing required field |
+| App file/OS error | `SplurgeOSError` | File not found in user code |
+| Library validation | `YourLibError.ValidationError` | Invalid config in your library |
+| Library runtime error | `YourLibError.RuntimeError` | Unexpected failure in your library |
+| Framework extension | `SplurgeFrameworkError` | Base for custom hierarchies |
 
 ## Library Integration Guide
 
 ### Creating Domain-Specific Exceptions
 
-As a library integrator, you can extend Splurge Exceptions to provide domain-specific error handling:
+As a library integrator, extend Splurge Exceptions to provide domain-specific error handling:
 
 #### Step 1: Create Domain-Specific Exception Classes
 
@@ -502,7 +506,7 @@ __all__ = [
 
 #### 4. Exception Chaining
 - Always use `raise ... from e` to preserve exception chains
-- Use `wrap_exception()` for clean chain preservation
+- Set `__cause__` on wrapped exceptions for clean chain preservation
 
 #### 5. Domain Hierarchy
 - Use hierarchical domains: `mylibrary.api.auth`, not just `auth`
@@ -514,26 +518,67 @@ __all__ = [
 
 ## Best Practices
 
+### Exception Selection
+
+#### For Applications
+- ✅ **DO** use the built-in `Splurge*Error` types for common cases
+- ✅ **DO** handle specific exception types with targeted `except` clauses
+- ✅ **DO** format errors for end users using `ErrorMessageFormatter`
+- ❌ **DON'T** use bare `SplurgeError` - prefer the semantic types
+
+#### For Libraries
+- ✅ **DO** define your own exception hierarchy inheriting from `SplurgeFrameworkError`
+- ✅ **DO** use your library name in the domain prefix (e.g., `splurge-safe-io`)
+- ✅ **DO** create semantic sub-types for different error categories
+- ✅ **DO** chain original exceptions with `__cause__`
+- ❌ **DON'T** use the built-in `Splurge*Error` types in library code
+- ❌ **DON'T** use bare `SplurgeError` or `SplurgeRuntimeError` in libraries
+
 ### Error Code Design
 
 - **Descriptive**: Use clear, descriptive names (`file-not-found` vs `fnf`)
 - **Consistent**: Follow the same patterns across your library
-- **Hierarchical**: Use domain hierarchy for organization
-- **Stable**: Don't change error codes once published
+- **Hierarchical**: Use domain hierarchy for organization (via inheritance)
+- **Stable**: Don't change error codes once published (backward compatibility)
+- **Lowercase**: Always use lowercase with hyphens (e.g., `invalid-value`, not `InvalidValue`)
+
+### Domain Naming for Libraries
+
+When creating a library like `splurge-safe-io`:
+
+```python
+# Good - clear library origin
+class SplurgeSafeIoError(SplurgeFrameworkError):
+    _domain = "splurge-safe-io"
+
+class SplurgeSafeIoValidationError(SplurgeSafeIoError):
+    _domain = "splurge-safe-io.validation"
+
+# Result: Full codes like "splurge-safe-io.validation.invalid-path"
+
+# Bad - generic or ambiguous
+class MyError(SplurgeFrameworkError):
+    _domain = "error"  # ❌ Not descriptive
+
+class IoError(SplurgeFrameworkError):
+    _domain = "io"  # ❌ Conflicts with built-in names
+```
 
 ### Context Management
 
-- **Relevant**: Only attach context relevant to the error
-- **Safe**: Don't include sensitive information in error context
+- **Relevant**: Only attach context relevant to debugging the error
+- **Safe**: Don't include sensitive information (passwords, tokens) in error context
 - **Structured**: Use consistent key naming conventions
-- **Useful**: Include information that helps debugging
+- **Useful**: Include information that helps developers understand what went wrong
+- **Concise**: Keep context data reasonably sized
 
 ### Exception Handling
 
 - **Specific**: Catch specific exception types, not broad `Exception`
-- **Chaining**: Preserve exception chains with `from` clause
+- **Chaining**: Always preserve exception chains with `from` clause
 - **Context**: Add relevant context before re-raising
-- **Logging**: Use decorators for consistent logging
+- **Logging**: Use decorators for consistent logging across your codebase
+- **Recovery**: Provide actionable recovery suggestions when possible
 
 ### User Experience
 
@@ -541,6 +586,7 @@ __all__ = [
 - **Actionable**: Include suggestions users can actually follow
 - **Progressive**: Show basic info first, detailed info on demand
 - **Consistent**: Use consistent formatting and terminology
+- **Localization**: Consider translation needs for user-facing messages
 
 ### Performance Considerations
 

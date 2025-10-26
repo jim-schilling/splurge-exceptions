@@ -31,9 +31,9 @@ class TestSplurgeValueError:
         )
 
         assert error.error_code == "invalid-value"
-        assert error.full_code == "value.invalid-value"
+        assert error.full_code == "splurge.value.invalid-value"
         assert error.message == "Invalid value"
-        assert error.domain == "value"
+        assert error.domain == "splurge.value"
 
     def test_can_catch_as_splurge_error(self) -> None:
         """Test catching as SplurgeError."""
@@ -59,7 +59,7 @@ class TestSplurgeOSError:
 
         assert error.error_code == "file-not-found"
         assert error.message == "File not found"
-        assert error.domain == "os"
+        assert error.domain == "splurge.os"
 
     def test_can_catch_as_splurge_error(self) -> None:
         """Test catching as SplurgeError."""
@@ -85,7 +85,7 @@ class TestSplurgeRuntimeError:
 
         assert error.error_code == "operation-failed"
         assert error.message == "Operation failed"
-        assert error.domain == "runtime"
+        assert error.domain == "splurge.runtime"
 
 
 class TestSplurgeFrameworkError:
@@ -104,7 +104,7 @@ class TestSplurgeFrameworkError:
 
         assert error.error_code == "framework-error"
         assert error.message == "Framework error"
-        assert error.domain == "framework"
+        assert error.domain == "splurge.framework"
 
     def test_can_be_subclassed_for_custom_framework(self) -> None:
         """Test that it can be subclassed for custom frameworks."""
@@ -137,9 +137,9 @@ class TestSplurgeTypeError:
         )
 
         assert error.error_code == "invalid-type"
-        assert error.full_code == "type.invalid-type"
+        assert error.full_code == "splurge.type.invalid-type"
         assert error.message == "Invalid type provided"
-        assert error.domain == "type"
+        assert error.domain == "splurge.type"
 
     def test_can_catch_as_splurge_error(self) -> None:
         """Test catching as SplurgeError."""
@@ -164,9 +164,9 @@ class TestSplurgeAttributeError:
         )
 
         assert error.error_code == "missing-attribute"
-        assert error.full_code == "attribute.missing-attribute"
+        assert error.full_code == "splurge.attribute.missing-attribute"
         assert error.message == "Attribute does not exist"
-        assert error.domain == "attribute"
+        assert error.domain == "splurge.attribute"
 
     def test_can_catch_as_splurge_error(self) -> None:
         """Test catching as SplurgeError."""
@@ -191,9 +191,9 @@ class TestSplurgeImportError:
         )
 
         assert error.error_code == "module-not-found"
-        assert error.full_code == "import.module-not-found"
+        assert error.full_code == "splurge.import.module-not-found"
         assert error.message == "Module could not be imported"
-        assert error.domain == "import"
+        assert error.domain == "splurge.import"
 
     def test_can_catch_as_splurge_error(self) -> None:
         """Test catching as SplurgeError."""
@@ -218,9 +218,9 @@ class TestSplurgeLookupError:
         )
 
         assert error.error_code == "item-not-found"
-        assert error.full_code == "lookup.item-not-found"
+        assert error.full_code == "splurge.lookup.item-not-found"
         assert error.message == "Item not found in collection"
-        assert error.domain == "lookup"
+        assert error.domain == "splurge.lookup"
 
     def test_can_catch_as_splurge_error(self) -> None:
         """Test catching as SplurgeError."""
@@ -271,7 +271,7 @@ class TestExceptionHierarchy:
         error.attach_context(key="field", value="email")
 
         assert error.get_context("field") == "email"
-        assert error.domain == "value"
+        assert error.domain == "splurge.value"
 
     def test_suggestions_inherited(self) -> None:
         """Test that suggestions are inherited."""
@@ -279,7 +279,7 @@ class TestExceptionHierarchy:
         error.add_suggestion("Check file path")
 
         assert error.get_suggestions() == ["Check file path"]
-        assert error.domain == "os"
+        assert error.domain == "splurge.os"
 
     def test_type_error_inherited(self) -> None:
         """Test that type error is inherited."""
@@ -287,7 +287,7 @@ class TestExceptionHierarchy:
         error.add_suggestion("Check type")
 
         assert error.get_suggestions() == ["Check type"]
-        assert error.domain == "type"
+        assert error.domain == "splurge.type"
 
     def test_lookup_error_inherited(self) -> None:
         """Test that lookup error is inherited."""
@@ -295,7 +295,7 @@ class TestExceptionHierarchy:
         error.add_suggestion("Check lookup")
 
         assert error.get_suggestions() == ["Check lookup"]
-        assert error.domain == "lookup"
+        assert error.domain == "splurge.lookup"
 
     def test_runtime_error_inherited(self) -> None:
         """Test that runtime error is inherited."""
@@ -303,7 +303,7 @@ class TestExceptionHierarchy:
         error.add_suggestion("Check runtime")
 
         assert error.get_suggestions() == ["Check runtime"]
-        assert error.domain == "runtime"
+        assert error.domain == "splurge.runtime"
 
     def test_framework_error_inherited(self) -> None:
         """Test that framework error is inherited."""
@@ -311,7 +311,7 @@ class TestExceptionHierarchy:
         error.add_suggestion("Check framework")
 
         assert error.get_suggestions() == ["Check framework"]
-        assert error.domain == "framework"
+        assert error.domain == "splurge.framework"
 
 
 class TestCatchingBySpecificType:
