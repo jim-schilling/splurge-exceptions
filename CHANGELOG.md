@@ -5,6 +5,41 @@ All notable changes to Splurge Exceptions will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Calendar Versioning](https://calver.org/).
 
+## [2025.1.0] - 2025-10-26
+
+### Changed (BREAKING)
+- **`SplurgeError` constructor signature completely redesigned** for v2.0:
+  - OLD: `__init__(error_code, *, message=None, details=None)`
+  - NEW: `__init__(message, error_code=None, details=None)`
+  - Message is now **required positional argument** (was optional keyword-only)
+  - Error code is now **optional keyword argument** (was required positional)
+  - This fixes the design flaw where invalid error codes at construction time would mask the original error
+
+### Added
+- **Error code normalization** replaces validation:
+  - Automatic lowercase conversion: `"InvalidCode"` → `"invalidcode"`
+  - Symbol replacement: spaces/underscores/dots → dashes
+  - Duplicate dash collapse: `"invalid---code"` → `"invalid-code"`
+  - Edge dash stripping: `"-code-"` → `"code"`
+  - Empty codes become `None` (no validation error raised)
+- **34 comprehensive coverage gap tests** for edge cases and error paths
+- **99% test coverage** with 81 total unit tests
+- Complete documentation updates for all examples and API references
+
+### Fixed
+- **Critical design issue**: Error code validation errors now won't mask the original exception the user was trying to report
+- **full_code property**: Now returns domain only (no error_code suffix) when error_code is None
+
+### Updated
+- All example files (examples/api_client_usage.py, examples/api_integrator_usage.py)
+- All documentation files (README.md, docs/README-DETAILS.md, docs/api/API-REFERENCE.md, docs/cli/CLI-REFERENCE.md)
+- CLI entry point in pyproject.toml: `run_cli` → `main`
+- All docstring examples in core modules
+- Test suite with fresh tests for new signature
+
+### Removed
+- 5 old test files that used the previous signature (replaced with fresh tests using new signature)
+
 ## [2025.0.1] - 2025-10-24
 
 ### Changed

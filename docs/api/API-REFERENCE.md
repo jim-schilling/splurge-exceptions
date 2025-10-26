@@ -1,6 +1,6 @@
 # API Reference - Splurge Exceptions
 
-Complete API documentation for the Splurge Exceptions library (Version 2025.0.1).
+Complete API documentation for the Splurge Exceptions library (Version 2025.1.0).
 
 ## Table of Contents
 
