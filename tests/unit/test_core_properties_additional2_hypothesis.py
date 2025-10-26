@@ -20,7 +20,7 @@ def test_formatter_handles_bad_object_repr() -> None:
         def __repr__(self) -> str:  # pragma: no cover - defensive
             raise RuntimeError("bad repr")
 
-    exc = SplurgeValueError(error_code="fmt-bad", message="msg")
+    exc = SplurgeValueError("msg", error_code="fmt-bad")
     exc.attach_context(key="bad", value=Bad())
 
     fmt = ErrorMessageFormatter()
@@ -41,7 +41,7 @@ def test_large_and_deep_contexts(n: int) -> None:
         curr["k"] = {"i": i}
         curr = curr["k"]
 
-    exc = SplurgeValueError(error_code="large-context", message="big")
+    exc = SplurgeValueError("big", error_code="large-context")
     exc.attach_context(key="nested", value=nested)
 
     fmt = ErrorMessageFormatter()

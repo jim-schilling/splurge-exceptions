@@ -32,7 +32,7 @@ from splurge_exceptions.core.exceptions import (
 )
 from splurge_exceptions.formatting.message import ErrorMessageFormatter
 
-__version__ = "2025.0.1"
+__version__ = "2025.1.0"
 __domains__ = ["exceptions", "errors", "handlers"]
 
 __all__ = [

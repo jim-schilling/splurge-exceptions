@@ -33,7 +33,7 @@ def test_exception_pickle_roundtrip_preserves_core_fields(
 ) -> None:
     """Pickling and unpickling should preserve error_code, context and suggestions."""
 
-    exc = SplurgeValueError(error_code=code, message=message)
+    exc = SplurgeValueError(message, error_code=code)
 
     # attach context via context_dict API
     exc.attach_context(context_dict=ctx)
@@ -56,7 +56,7 @@ def test_exception_pickle_roundtrip_preserves_core_fields(
 def test_attach_context_with_context_dict_does_not_reflect_future_keys(d: dict[str, Any]) -> None:
     """When passing a dict to `attach_context(context_dict=...)`, later additions to the source dict are not reflected."""
 
-    exc = SplurgeValueError(error_code="immutability-test", message="immutability")
+    exc = SplurgeValueError("immutability", error_code="immutability-test")
 
     # attach by passing the dict; attach_context should copy current keys
     exc.attach_context(context_dict=d)
@@ -90,7 +90,7 @@ def test_unicode_and_long_strings_in_codes_messages_and_context(
     else:
         safe_code = "unicode-test"
 
-    exc = SplurgeValueError(error_code=safe_code, message=message)
+    exc = SplurgeValueError(message, error_code=safe_code)
 
     exc.attach_context(key=ctx_key, value=ctx_value)
 
@@ -120,7 +120,7 @@ def test_invalid_error_codes_raise_value_error(bad: str) -> None:
 
     try:
         # Attempt to construct with invalid code - constructor should validate
-        SplurgeValueError(error_code=bad, message="bad")
+        SplurgeValueError("bad", error_code=bad)
     except SplurgeSubclassError:
         # expected
         return

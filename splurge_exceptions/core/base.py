@@ -33,6 +33,39 @@ VALID_COMPONENT_PATTERN = re.compile(r"^[a-z][a-z0-9\-]*[a-z0-9]$")
 VALID_HIERARCHICAL_PATTERN = re.compile(r"^[a-z][a-z0-9\-\.]*[a-z0-9]$")
 
 
+def _normalize_error_code(code: str | None) -> str | None:
+    """Normalize error code to lowercase with dashes, no spaces/underscores/symbols.
+
+    Converts:
+    - Uppercase to lowercase
+    - Spaces, underscores, and symbols to dashes
+    - Duplicate dashes to single dash
+    - Strips leading/trailing dashes
+
+    Args:
+        code: Raw error code string or None
+
+    Returns:
+        Normalized error code or None if input is None
+    """
+    if code is None:
+        return None
+
+    # Convert to lowercase
+    code = code.lower()
+
+    # Replace spaces, underscores, and non-alphanumeric characters with dashes
+    code = re.sub(r"[_\s\W]+", "-", code)
+
+    # Remove duplicate dashes
+    code = re.sub(r"-+", "-", code)
+
+    # Strip leading/trailing dashes
+    code = code.strip("-")
+
+    return code if code else None
+
+
 class SplurgeSubclassError(Exception):
     """Raised when a SplurgeError subclass is misconfigured.
 
@@ -62,9 +95,11 @@ class SplurgeError(Exception):
     """Base class for all Splurge exceptions.
 
     All Splurge exception types should inherit from this class and define a
-    class-level ``_domain`` string. When an instance is created the provided
-    ``error_code`` is validated and combined with ``_domain`` to form
-    ``full_code`` (``{domain}.{error_code}``).
+    class-level ``_domain`` string. When an instance is created, the provided
+    ``message`` becomes the exception message, and the optional ``error_code``
+    is normalized and combined with ``_domain`` to form ``full_code``
+    (``{domain}.{error_code}``). If no ``error_code`` is provided, ``full_code``
+    is just the domain.
 
     Attributes:
         _domain (str): Hierarchical domain identifier that subclasses must set.
@@ -74,44 +109,53 @@ class SplurgeError(Exception):
         class SplurgeSqlQueryError(SplurgeError):
             _domain = "database.sql.query"
 
-        error = SplurgeSqlQueryError(error_code="column-not-found",
-                                     message="Column 'user_id' does not exist")
+        error = SplurgeSqlQueryError("Column 'user_id' does not exist", error_code="column-not-found")
         print(error.full_code)  # "database.sql.query.column-not-found"
+
+        error2 = SplurgeSqlQueryError("Connection timeout")  # No error_code
+        print(error2.full_code)  # "database.sql.query"
 
     """
 
     # Must be overridden by subclasses
     _domain: str
 
+    # Instance variables with type hints
+    _error_code: str | None
+    _message: str
+    _details: dict[str, Any]
+    _context: dict[str, Any]
+    _suggestions: list[str]
+
     def __init__(
         self,
-        error_code: str,
-        *,
-        message: str | None = None,
+        message: str,
+        error_code: str | None = None,
         details: dict[str, Any] | None = None,
     ) -> None:
         """Initialize SplurgeError.
 
         Args:
-            error_code: User-defined semantic error identifier (e.g., "invalid-column")
-            message: Human-readable error message
-            details: Additional error details/context
+            message: Human-readable error message (required, primary parameter)
+            error_code: Optional semantic error identifier. Will be normalized to
+                lowercase with spaces/underscores/symbols converted to dashes.
+                If not provided, full_code will be just the domain.
+            details: Optional dictionary of additional error details/context
 
         Raises:
-            SplurgeSubclassError: If _domain is not defined or if error_code/_domain
-                don't match required patterns.
+            SplurgeSubclassError: If _domain is not defined or invalid.
         """
         # Verify _domain is defined
         if not hasattr(self.__class__, "_domain"):
             raise SplurgeSubclassError(f"{self.__class__.__name__} must define _domain class attribute")
 
-        # Validate error_code
-        self._validate_error_code(error_code)
-
         # Validate _domain
         self._validate_domain(self._domain)
 
-        self._error_code = error_code
+        # Normalize error_code (converts invalid chars to dashes, lowercases, etc.)
+        normalized_code = _normalize_error_code(error_code)
+
+        self._error_code = normalized_code
         self._message = message
         self._details = details or {}
         self._context: dict[str, Any] = {}
@@ -120,28 +164,6 @@ class SplurgeError(Exception):
         # Construct the exception message
         error_message = self._format_message()
         super().__init__(error_message)
-
-    @staticmethod
-    def _validate_error_code(error_code: str) -> None:
-        """Validate error code format.
-
-        User-provided error codes cannot contain dots. Dots are only allowed
-        in domain hierarchies (e.g., "database.sql.query").
-
-        Args:
-            error_code: Error code to validate (e.g., "invalid-column", "timeout")
-
-        Raises:
-            SplurgeSubclassError: If error_code doesn't match pattern.
-        """
-        if not error_code:
-            raise SplurgeSubclassError("error_code cannot be empty")
-
-        if not VALID_COMPONENT_PATTERN.match(error_code):
-            raise SplurgeSubclassError(
-                f"Invalid error_code '{error_code}'. Must match pattern "
-                "[a-z][a-z0-9-]*[a-z0-9] (e.g., 'invalid-column', 'timeout')"
-            )
 
     @staticmethod
     def _validate_domain(domain: str) -> None:
@@ -187,19 +209,23 @@ class SplurgeError(Exception):
     def full_code(self) -> str:
         """Get the full error code.
 
-        Combines domain and error_code with dots.
+        Combines domain and error_code with dots. If error_code is None,
+        returns just the domain.
 
         Returns:
             The full error code (e.g., "database.sql.query.invalid-column")
+            or just domain if no error_code (e.g., "database.sql.query")
         """
-        return f"{self._domain}.{self._error_code}"
+        if self._error_code:
+            return f"{self._domain}.{self._error_code}"
+        return self._domain
 
     @property
-    def error_code(self) -> str:
-        """Get the user-defined error code.
+    def error_code(self) -> str | None:
+        """Get the user-defined error code (normalized).
 
         Returns:
-            The error code (e.g., "invalid-column")
+            The error code (e.g., "invalid-column") or None if not provided.
         """
         return self._error_code
 
@@ -434,8 +460,8 @@ class SplurgeError(Exception):
             return
 
         # Restore keyword arguments from the state
-        message = state.get("message")
-        details = state.get("details", {})
+        message: str = state.get("message") or ""
+        details: dict[str, Any] = state.get("details", {})
 
         # Update instance with these values
         self._message = message

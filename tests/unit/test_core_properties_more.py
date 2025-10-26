@@ -17,7 +17,7 @@ from splurge_exceptions import (
 
 
 def test_pickle_roundtrip_preserves_core_fields() -> None:
-    exc = SplurgeValueError(error_code="roundtrip", message="round")
+    exc = SplurgeValueError("round", error_code="roundtrip")
 
     ctx = {"a": 1, "b": {"x": "y"}, "c": [1, 2, 3]}
     exc.attach_context(context_dict=ctx)
@@ -36,7 +36,7 @@ def test_attach_context_shallow_copy_behavior() -> None:
     will be visible in the stored context (document current behavior)."""
 
     nested = {"lst": [1, 2], "d": {"x": 1}}
-    exc = SplurgeValueError(error_code="shallow", message="shallow")
+    exc = SplurgeValueError("shallow", error_code="shallow")
     exc.attach_context(context_dict=nested)  # type: ignore
 
     # Mutate original nested structures (use casts to satisfy static typing)
@@ -57,7 +57,7 @@ def test_formatter_handles_varied_value_types() -> None:
 
     long_str = "x" * 10000
 
-    exc = SplurgeValueError(error_code="fmt-varied", message="fmt")
+    exc = SplurgeValueError("fmt", error_code="fmt-varied")
     exc.attach_context(
         context_dict={
             "none": None,

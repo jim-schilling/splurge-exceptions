@@ -29,7 +29,7 @@ class TestContextSizeLimits:
 
     def test_context_with_very_large_dictionary(self) -> None:
         """Test attaching context with large number of key-value pairs."""
-        exc = SplurgeValueError(error_code="large-context", message="Large context test")
+        exc = SplurgeValueError("Large context test", error_code="large-context")
 
         # Create a context with 1000 key-value pairs
         large_context = {f"key_{i}": f"value_{i}" for i in range(1000)}
@@ -41,7 +41,7 @@ class TestContextSizeLimits:
 
     def test_context_with_deeply_nested_structure(self) -> None:
         """Test attaching deeply nested dictionary structures."""
-        exc = SplurgeValueError(error_code="nested", message="Nested context test")
+        exc = SplurgeValueError("Nested context test", error_code="nested")
 
         # Create a deeply nested structure (10 levels)
         nested = {"level": 0}
@@ -64,7 +64,7 @@ class TestContextSizeLimits:
 
     def test_context_with_large_list_values(self) -> None:
         """Test context values containing large lists."""
-        exc = SplurgeValueError(error_code="list-context", message="List context test")
+        exc = SplurgeValueError("List context test", error_code="list-context")
 
         large_list = list(range(10000))
         exc.attach_context(context_dict={"items": large_list})
@@ -76,7 +76,7 @@ class TestContextSizeLimits:
 
     def test_context_with_nested_mutable_objects(self) -> None:
         """Test shallow copy behavior: nested mutable objects are shared."""
-        exc1 = SplurgeValueError(error_code="iso1", message="Isolation test 1")
+        exc1 = SplurgeValueError("Isolation test 1", error_code="iso1")
 
         # Shallow copy means nested structures ARE shared
         nested = {"status": ["pending"]}
@@ -98,19 +98,19 @@ class TestErrorCodeLengthBoundaries:
     def test_error_code_minimum_length_2_chars(self) -> None:
         """Test that 2-character error codes are valid (minimum)."""
         # Minimum valid: 2 chars, lowercase letter start/end
-        exc = SplurgeValueError(error_code="ab", message="Two char code")
+        exc = SplurgeValueError("Two char code", error_code="ab")
         assert exc.error_code == "ab"
 
     def test_error_code_1_char_invalid(self) -> None:
         """Test that 1-character error codes are invalid."""
         # Single char does not match pattern (needs start + end = 2 minimum)
         with pytest.raises(SplurgeSubclassError):
-            SplurgeValueError(error_code="a", message="One char code")
+            SplurgeValueError("One char code", error_code="a")
 
     def test_error_code_very_long_valid(self) -> None:
         """Test that very long error codes (100+ chars) are valid."""
         long_code = "a" + "b" * 98 + "c"  # 100 chars, valid pattern
-        exc = SplurgeValueError(error_code=long_code, message="Very long code")
+        exc = SplurgeValueError("Very long code", error_code=long_code)
         assert exc.error_code == long_code
         assert len(exc.error_code) == 100
 
@@ -118,19 +118,19 @@ class TestErrorCodeLengthBoundaries:
         """Test error code with maximum hyphens in middle."""
         # Pattern: starts with letter, ends with letter/digit, hyphens in middle
         code = "a" + "-" * 50 + "z"
-        exc = SplurgeValueError(error_code=code, message="Max hyphens")
+        exc = SplurgeValueError("Max hyphens", error_code=code)
         assert exc.error_code == code
 
     def test_error_code_alternating_letters_and_hyphens(self) -> None:
         """Test error code with alternating pattern."""
         code = "a-b-c-d-e-f-g-h-i-j-k"
-        exc = SplurgeValueError(error_code=code, message="Alternating")
+        exc = SplurgeValueError("Alternating", error_code=code)
         assert exc.error_code == code
 
     def test_error_code_with_many_digits(self) -> None:
         """Test error code with multiple digits."""
         code = "error-123-456-789"
-        exc = SplurgeValueError(error_code=code, message="With digits")
+        exc = SplurgeValueError("With digits", error_code=code)
         assert exc.error_code == code
 
 
@@ -139,21 +139,21 @@ class TestDeepDomainHierarchies:
 
     def test_domain_with_2_components(self) -> None:
         """Test valid 2-component domain."""
-        exc = SplurgeValueError(error_code="test", message="Two component")
+        exc = SplurgeValueError("Two component", error_code="test")
         exc._domain = "database.sql"
         assert exc.domain == "database.sql"
         assert exc.full_code == "database.sql.test"
 
     def test_domain_with_5_components(self) -> None:
         """Test valid 5-component domain hierarchy."""
-        exc = SplurgeValueError(error_code="test", message="Five component")
+        exc = SplurgeValueError("Five component", error_code="test")
         exc._domain = "app.service.database.query.validation"
         assert exc.domain == "app.service.database.query.validation"
         assert exc.full_code == "app.service.database.query.validation.test"
 
     def test_domain_with_10_components(self) -> None:
         """Test very deep 10-component domain hierarchy."""
-        exc = SplurgeValueError(error_code="test", message="Deep hierarchy")
+        exc = SplurgeValueError("Deep hierarchy", error_code="test")
         exc._domain = "a.b.c.d.e.f.g.h.i.j"
         assert exc.domain == "a.b.c.d.e.f.g.h.i.j"
         assert exc.full_code == "a.b.c.d.e.f.g.h.i.j.test"
@@ -161,7 +161,7 @@ class TestDeepDomainHierarchies:
     def test_domain_with_15_components(self) -> None:
         """Test extremely deep 15-component domain."""
         components = ".".join([chr(ord("a") + (i % 26)) for i in range(15)])
-        exc = SplurgeValueError(error_code="test", message="Extreme depth")
+        exc = SplurgeValueError("Extreme depth", error_code="test")
         exc._domain = components
         assert exc.full_code.startswith(components)
 
@@ -169,7 +169,7 @@ class TestDeepDomainHierarchies:
         """Test domain with long individual component names."""
         # Each component can be very long
         component = "a" + "b" * 48 + "c"  # 50 char valid component
-        exc = SplurgeValueError(error_code="test", message="Long components")
+        exc = SplurgeValueError("Long components", error_code="test")
         exc._domain = f"{component}.{component}"
         assert exc.domain == f"{component}.{component}"
 
@@ -179,7 +179,7 @@ class TestContextKeyEdgeCases:
 
     def test_context_key_with_special_characters(self) -> None:
         """Test context keys containing special characters."""
-        exc = SplurgeValueError(error_code="special-keys", message="Special keys test")
+        exc = SplurgeValueError("Special keys test", error_code="special-keys")
 
         special_keys = {
             "key-with-hyphens": "value1",
@@ -199,7 +199,7 @@ class TestContextKeyEdgeCases:
 
     def test_context_key_single_character(self) -> None:
         """Test context with single-character keys."""
-        exc = SplurgeValueError(error_code="single-char-keys", message="Single char keys")
+        exc = SplurgeValueError("Single char keys", error_code="single-char-keys")
 
         exc.attach_context(context_dict={"a": 1, "b": 2, "c": 3})
 
@@ -209,7 +209,7 @@ class TestContextKeyEdgeCases:
 
     def test_context_key_very_long(self) -> None:
         """Test context with very long keys."""
-        exc = SplurgeValueError(error_code="long-keys", message="Long keys test")
+        exc = SplurgeValueError("Long keys test", error_code="long-keys")
 
         long_key = "k" * 1000
         exc.attach_context(context_dict={long_key: "long-key-value"})
@@ -218,7 +218,7 @@ class TestContextKeyEdgeCases:
 
     def test_context_key_numeric_string(self) -> None:
         """Test context with numeric string keys."""
-        exc = SplurgeValueError(error_code="numeric-keys", message="Numeric string keys")
+        exc = SplurgeValueError("Numeric string keys", error_code="numeric-keys")
 
         exc.attach_context(
             context_dict={
@@ -234,7 +234,7 @@ class TestContextKeyEdgeCases:
 
     def test_context_overwrite_existing_key(self) -> None:
         """Test overwriting existing context keys."""
-        exc = SplurgeValueError(error_code="overwrite", message="Overwrite test")
+        exc = SplurgeValueError("Overwrite test", error_code="overwrite")
 
         exc.attach_context(key="status", value="pending")
         assert exc.get_context("status") == "pending"
@@ -251,7 +251,7 @@ class TestSuggestionEdgeCases:
 
     def test_suggestion_empty_string(self) -> None:
         """Test adding empty string as suggestion."""
-        exc = SplurgeValueError(error_code="empty-sugg", message="Empty suggestion")
+        exc = SplurgeValueError("Empty suggestion", error_code="empty-sugg")
 
         exc.add_suggestion("")
         exc.add_suggestion("Valid suggestion")
@@ -263,7 +263,7 @@ class TestSuggestionEdgeCases:
 
     def test_suggestion_very_long(self) -> None:
         """Test adding very long suggestion."""
-        exc = SplurgeValueError(error_code="long-sugg", message="Long suggestion")
+        exc = SplurgeValueError("Long suggestion", error_code="long-sugg")
 
         long_suggestion = "Try this: " + ("x" * 10000)
         exc.add_suggestion(long_suggestion)
@@ -273,7 +273,7 @@ class TestSuggestionEdgeCases:
 
     def test_suggestion_duplicate_values(self) -> None:
         """Test adding duplicate suggestions (should be allowed)."""
-        exc = SplurgeValueError(error_code="dup-sugg", message="Duplicate suggestions")
+        exc = SplurgeValueError("Duplicate suggestions", error_code="dup-sugg")
 
         exc.add_suggestion("Try again")
         exc.add_suggestion("Try again")
@@ -285,7 +285,7 @@ class TestSuggestionEdgeCases:
 
     def test_suggestion_with_special_characters(self) -> None:
         """Test suggestions with special characters."""
-        exc = SplurgeValueError(error_code="special-sugg", message="Special suggestions")
+        exc = SplurgeValueError("Special suggestions", error_code="special-sugg")
 
         special_suggestions = [
             "Try: key=\"value\", other='data'",
@@ -305,7 +305,7 @@ class TestSuggestionEdgeCases:
 
     def test_many_suggestions(self) -> None:
         """Test adding many suggestions."""
-        exc = SplurgeValueError(error_code="many-sugg", message="Many suggestions")
+        exc = SplurgeValueError("Many suggestions", error_code="many-sugg")
 
         for i in range(100):
             exc.add_suggestion(f"Suggestion {i}: try approach {i}")
@@ -317,7 +317,7 @@ class TestSuggestionEdgeCases:
 
     def test_suggestion_with_newlines_and_tabs(self) -> None:
         """Test suggestions containing newlines and tabs."""
-        exc = SplurgeValueError(error_code="whitespace-sugg", message="Whitespace suggestions")
+        exc = SplurgeValueError("Whitespace suggestions", error_code="whitespace-sugg")
 
         exc.add_suggestion("Line 1\nLine 2\nLine 3")
         exc.add_suggestion("Column1\tColumn2\tColumn3")
@@ -336,7 +336,7 @@ class TestExceptionChaining:
             try:
                 raise ValueError("Original error")
             except ValueError as e:
-                raise SplurgeValueError(error_code="chained", message="Chained error") from e
+                raise SplurgeValueError("Chained error", error_code="chained") from e
         except SplurgeValueError as exc:
             assert exc.__cause__.__class__ is ValueError
             assert str(exc.__cause__) == "Original error"
@@ -350,13 +350,13 @@ class TestExceptionChaining:
                         try:
                             raise ValueError("Level 5")
                         except ValueError as e:
-                            raise SplurgeTypeError(error_code="level-4", message="L4") from e
+                            raise SplurgeTypeError("L4", error_code="level-4") from e
                     except SplurgeTypeError as e:
-                        raise SplurgeAttributeError(error_code="level-3", message="L3") from e
+                        raise SplurgeAttributeError("L3", error_code="level-3") from e
                 except SplurgeAttributeError as e:
-                    raise SplurgeRuntimeError(error_code="level-2", message="L2") from e
+                    raise SplurgeRuntimeError("L2", error_code="level-2") from e
             except SplurgeRuntimeError as e:
-                raise SplurgeImportError(error_code="level-1", message="L1") from e
+                raise SplurgeImportError("L1", error_code="level-1") from e
         except SplurgeImportError as exc:
             # Verify the chain
             assert isinstance(exc.__cause__, SplurgeRuntimeError)
@@ -370,7 +370,7 @@ class TestExceptionChaining:
             try:
                 raise ValueError("Original")
             except ValueError as e:
-                exc = SplurgeValueError(error_code="wrapped", message="Wrapped error")
+                exc = SplurgeValueError("Wrapped error", error_code="wrapped")
                 exc.attach_context(key="original_error", value=str(e))
                 exc.add_suggestion("Check the original error")
                 raise exc from e
@@ -386,7 +386,7 @@ class TestExceptionChaining:
                 raise ValueError("First error")
             except ValueError:
                 # Explicitly suppress context
-                raise SplurgeValueError(error_code="suppress", message="Suppressed") from None
+                raise SplurgeValueError("Suppressed", error_code="suppress") from None
         except SplurgeValueError as exc:
             # __cause__ should be None when explicitly suppressed
             assert exc.__cause__ is None
@@ -397,7 +397,7 @@ class TestExceptionChaining:
             try:
                 raise RuntimeError("Database connection failed")
             except RuntimeError as e:
-                exc = SplurgeRuntimeError(error_code="db-error", message="DB Error")
+                exc = SplurgeRuntimeError("DB Error", error_code="db-error")
                 exc.add_suggestion("Retry connection")
                 raise exc from e
         except SplurgeRuntimeError as exc:
@@ -412,7 +412,7 @@ class TestExceptionChaining:
             try:
                 raise KeyError("Missing key")
             except KeyError as e:
-                exc = SplurgeValueError(error_code="key-error", message="Key missing")
+                exc = SplurgeValueError("Key missing", error_code="key-error")
                 raise exc from e
         except SplurgeValueError as exc:
             # Modify after chaining
