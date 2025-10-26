@@ -9,7 +9,7 @@ Usage example:
 
     from splurge_exceptions import SplurgeValueError, ErrorMessageFormatter
 
-    exc = SplurgeValueError(error_code="invalid-value", message="Invalid input")
+    exc = SplurgeValueError("Invalid input", error_code="invalid-value")
     fmt = ErrorMessageFormatter()
     print(fmt.format_error(exc, include_context=True))
 
@@ -32,7 +32,7 @@ from splurge_exceptions.core.exceptions import (
 )
 from splurge_exceptions.formatting.message import ErrorMessageFormatter
 
-__version__ = "2025.0.1"
+__version__ = "2025.1.0"
 __domains__ = ["exceptions", "errors", "handlers"]
 
 __all__ = [

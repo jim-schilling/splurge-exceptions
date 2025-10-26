@@ -108,7 +108,7 @@ class SplurgeFrameworkError(SplurgeError):
         class SplurgeDsvError(SplurgeFrameworkError):
             _domain = "splurge-dsv"
 
-        raise SplurgeDsvError(error_code="parse-failed", message="DSV parse failed")
+        raise SplurgeDsvError("DSV parse failed", error_code="parse-failed")
 
     Attributes:
         _domain (str): "splurge.framework"

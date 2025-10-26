@@ -5,7 +5,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
 
 [![CI](https://github.com/jim-schilling/splurge-exceptions/actions/workflows/ci-quick-test.yml/badge.svg)](https://github.com/jim-schilling/splurge-exceptions/actions/workflows/ci-quick-test.yml)
-[![Coverage](https://img.shields.io/badge/coverage-98%25-brightgreen.svg)](https://github.com/jim-schilling/splurge-exceptions)
+[![Coverage](https://img.shields.io/badge/coverage-99%25-brightgreen.svg)](https://github.com/jim-schilling/splurge-exceptions)
 [![Ruff](https://img.shields.io/endpoint?url=https://raw.githubusercontent.com/astral-sh/ruff/main/assets/badge/v2.json)](https://github.com/astral-sh/ruff)
 [![mypy](https://img.shields.io/badge/mypy-checked-black)](https://mypy-lang.org/)
 
@@ -30,8 +30,8 @@ from splurge_exceptions import SplurgeValueError
 
 # Create a semantic exception with context
 error = SplurgeValueError(
+    "Email address format is invalid",
     error_code="invalid-email",
-    message="Email address format is invalid",
     details={"provided": "user@", "expected": "user@domain.com"}
 )
 
@@ -55,8 +55,8 @@ try:
 except ValueError as e:
     # Wrap the exception with structured error
     wrapped = SplurgeValueError(
+        "Could not parse input as integer",
         error_code="invalid-integer",
-        message="Could not parse input as integer",
         details={"input": "invalid"}
     )
     raise wrapped from e
@@ -87,8 +87,8 @@ class SplurgeSafeIoRuntimeError(SplurgeSafeIoError):
     _domain = "splurge-safe-io.runtime"
 
 raise SplurgeSafeIoRuntimeError(
+    "Unexpected error occurred",
     error_code="unexpected",
-    message="Unexpected error occurred",
 )
 # Resulting full error code: "splurge-safe-io.runtime.unexpected"
 ```

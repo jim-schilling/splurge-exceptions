@@ -46,16 +46,16 @@ class DatabaseConnection:
         """Connect to database."""
         # Simulate connection logic
         if not self.host:
-            raise SplurgeValueError(error_code="invalid-host", message="Database host cannot be empty")
+            raise SplurgeValueError("Database host cannot be empty", error_code="invalid-host")
 
         if self.port < 1 or self.port > 65535:
-            raise SplurgeValueError(error_code="invalid-port", message=f"Invalid port number: {self.port}")
+            raise SplurgeValueError(f"Invalid port number: {self.port}", error_code="invalid-port")
 
         # Simulate connection failure
         if self.host == "invalid.example.com":
             raise SplurgeOSError(
+                "Failed to connect to database",
                 error_code="connection-failed",
-                message="Failed to connect to database",
                 details={"host": self.host, "port": self.port},
             )
 
@@ -72,19 +72,19 @@ class DatabaseConnection:
             Query results as list of dictionaries
         """
         if not self.connected:
-            raise SplurgeRuntimeError(error_code="not-connected", message="Database connection not established")
+            raise SplurgeRuntimeError("Database connection not established", error_code="not-connected")
 
         if not query.strip():
-            raise SplurgeValueError(error_code="empty-query", message="Query cannot be empty")
+            raise SplurgeValueError("Query cannot be empty", error_code="empty-query")
 
         # Simulate query execution with potential failures
         if "INVALID" in query.upper():
-            raise SplurgeValueError(error_code="invalid-syntax", message="Invalid SQL syntax", details={"query": query})
+            raise SplurgeValueError("Invalid SQL syntax", error_code="invalid-syntax", details={"query": query})
 
         if "TIMEOUT" in query.upper():
             raise SplurgeRuntimeError(
+                "Query execution timed out",
                 error_code="query-timeout",
-                message="Query execution timed out",
                 details={"timeout": "30s", "query": query},
             )
 
@@ -148,8 +148,8 @@ class UserService:
         except SplurgeOSError as e:
             # Convert connection errors
             error = SplurgeRuntimeError(
+                str(e.message or e.error_code),
                 error_code="database-connection-error",
-                message=str(e.message or e.error_code),
             )
             raise error from e
         except SplurgeRuntimeError as e:
@@ -205,16 +205,16 @@ class UserService:
             # Validate input
             if not isinstance(user_data, dict):
                 raise SplurgeValueError(
-                    error_code="invalid-input-type",
                     message="User data must be a dictionary",
+                    error_code="invalid-input-type",
                 )
 
             required_fields = ["name", "email"]
             for field in required_fields:
                 if field not in user_data:
                     raise SplurgeValueError(
-                        error_code="missing-required-field",
                         message=f"Required field '{field}' is missing",
+                        error_code="missing-required-field",
                         details={"field": field, "provided_fields": list(user_data.keys())},
                     )
 
@@ -222,8 +222,8 @@ class UserService:
             email = user_data["email"]
             if "@" not in email:
                 raise SplurgeValueError(
-                    error_code="invalid-email-format",
                     message="Invalid email format",
+                    error_code="invalid-email-format",
                     details={"email": email},
                 )
 
