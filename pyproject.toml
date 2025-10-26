@@ -43,7 +43,7 @@ Documentation = "https://github.com/jim-schilling/splurge-exceptions#readme"
 "Bug Tracker" = "https://github.com/jim-schilling/splurge-exceptions/issues"
 
 [project.scripts]
-splurge-exceptions = "splurge_exceptions.cli:run_cli"
+splurge-exceptions = "splurge_exceptions.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]

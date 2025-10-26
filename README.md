@@ -11,7 +11,7 @@
 
 
 
-A comprehensive Python exception management library that provides structured error handling, semantic error codes, and intelligent error organization for modern applications.
+A comprehensive Python exception management library that provides structured error handling, semantic error codes, and intelligent error organization for Splurge projects.
 
 ## Quick Start
 
