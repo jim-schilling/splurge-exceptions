@@ -425,8 +425,7 @@ class DataProcessor:
             header = [field.strip() for field in lines[0].split(delimiter)]
         except Exception as e:
             error = SplurgeFormatError(
-                f"Failed to parse CSV header with delimiter '{delimiter}'",
-                error_code="invalid-csv-header"
+                f"Failed to parse CSV header with delimiter '{delimiter}'", error_code="invalid-csv-header"
             )
             error.attach_context({"delimiter": delimiter})
             raise error from e

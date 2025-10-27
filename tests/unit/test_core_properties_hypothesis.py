@@ -137,9 +137,7 @@ class TestContextManagementProperties:
 
     @given(
         message=valid_messages(),
-        context_items=st.dictionaries(
-            st.text(min_size=1, max_size=20), st.integers(), min_size=1, max_size=10
-        ),
+        context_items=st.dictionaries(st.text(min_size=1, max_size=20), st.integers(), min_size=1, max_size=10),
     )
     @settings(max_examples=100)
     def test_context_retrieval_consistency(self, message, context_items):
