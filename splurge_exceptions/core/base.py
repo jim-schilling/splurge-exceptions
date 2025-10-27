@@ -7,13 +7,23 @@ instantiated. The combination of ``_domain`` and ``error_code`` forms the
 full hierarchical error code used for logging, telemetry, and user-facing
 messages.
 
+If the domain already ends with the error_code, the full_code property
+returns only the domain to avoid duplication.
+
 Example:
 
     class SplurgeSqlError(SplurgeError):
         _domain = "splurge.sql"
 
     err = SplurgeSqlError("Missing column", error_code="invalid-column")
-    print(err.full_code)  # -> "splurge.sql.invalid-column"
+    print(err.full_code)  /* -> "splurge.sql.invalid-column" */
+
+    /* When domain ends with error_code, no duplication occurs: */
+    class SplurgeSqlQueryError(SplurgeError):
+        _domain = "splurge.sql.invalid-column"
+
+    err2 = SplurgeSqlQueryError("Column missing", error_code="invalid-column")
+    print(err2.full_code)  # -> "splurge.sql.invalid-column"
 
 """
 
@@ -97,9 +107,12 @@ class SplurgeError(Exception):
     All Splurge exception types should inherit from this class and define a
     class-level ``_domain`` string. When an instance is created, the provided
     ``message`` becomes the exception message, and the optional ``error_code``
-    is normalized and combined with ``_domain`` to form ``full_code``
-    (``{domain}.{error_code}``). If no ``error_code`` is provided, ``full_code``
-    is just the domain.
+    is normalized and combined with ``_domain`` to form ``full_code``.
+
+    If error_code is provided and domain ends with it, full_code returns only
+    the domain (avoiding duplication). Otherwise, full_code returns domain with
+    error_code appended (``{domain}.{error_code}``). If no ``error_code`` is
+    provided, ``full_code`` is just the domain.
 
     Attributes:
         _domain (str): Hierarchical domain identifier that subclasses must set.
@@ -114,6 +127,13 @@ class SplurgeError(Exception):
 
         error2 = SplurgeSqlQueryError("Connection timeout")  # No error_code
         print(error2.full_code)  # "database.sql.query"
+
+        /* Deduplication example: */
+        class DatabaseError(SplurgeError):
+            _domain = "database.column-not-found"
+
+        error3 = DatabaseError("Missing column", error_code="column-not-found")
+        print(error3.full_code)  # "database.column-not-found" (not duplicated)
 
     """
 
@@ -210,13 +230,15 @@ class SplurgeError(Exception):
         """Get the full error code.
 
         Combines domain and error_code with dots. If error_code is None,
-        returns just the domain.
+        returns just the domain. If domain already ends with the error_code,
+        returns only the domain to prevent duplication.
 
         Returns:
             The full error code (e.g., "database.sql.query.invalid-column")
-            or just domain if no error_code (e.g., "database.sql.query")
+            or just domain if no error_code or domain ends with error_code
+            (e.g., "database.sql.query")
         """
-        if self._error_code:
+        if self._error_code and not self._domain.endswith(self._error_code):
             return f"{self._domain}.{self._error_code}"
         return self._domain
 

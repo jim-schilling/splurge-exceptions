@@ -5,6 +5,20 @@ All notable changes to Splurge Exceptions will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Calendar Versioning](https://calver.org/).
 
+## [2025.2.0] - 2025-10-27
+
+### Updated
+- Package version updated to `2025.2.0` in `splurge_exceptions/__init__.py`.
+- Bumped version to `2025.2.0` in `pyproject.toml` for new release.
+
+### Refactored
+- **`full_code` property logic** in `SplurgeError` refined:
+  - Now checks if `error_code` is part of `domain` before appending.
+  - Returns just the domain if `error_code` is already included in it.
+
+### Added
+- Additional unit tests for `full_code` property covering new logic paths.
+
 ## [2025.1.0] - 2025-10-26
 
 ### Changed (BREAKING)

@@ -1,6 +1,6 @@
 # API Reference - Splurge Exceptions
 
-Complete API documentation for the Splurge Exceptions library (Version 2025.1.0).
+Complete API documentation for the Splurge Exceptions library (Version 2025.2.0).
 
 ## Table of Contents
 
@@ -66,9 +66,14 @@ class SplurgeError(Exception):
     def full_code(self) -> str:
         """Get the full hierarchical error code with domain.
         
+        Returns the domain combined with error_code (if provided and domain doesn't
+        already end with it). If domain ends with error_code, returns only the domain
+        to prevent duplication.
+        
         Returns:
-            Full code including domain
-            Example: "value.invalid-value"
+            Full code including domain (e.g., "value.invalid-value" or 
+            "app.validation.invalid-value" when domain is "app.validation.invalid-value" 
+            and error_code is "invalid-value", avoiding duplication)
         """
         ...
     
@@ -466,6 +471,16 @@ try:
     )
 except CustomDatabaseError as e:
     print(e.full_code)  # Prints: database.custom.operations.query-execution
+```
+
+**Deduplication Note:** If your domain already ends with the error_code you're providing, `full_code` will return only the domain (avoiding duplication):
+
+```python
+class QueryError(SplurgeError):
+    _domain = "database.custom.operations.query-execution"
+
+error = QueryError("Query failed", error_code="query-execution")
+print(error.full_code)  # Prints: database.custom.operations.query-execution (not duplicated)
 ```
 
 ## Message Formatting

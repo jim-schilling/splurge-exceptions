@@ -9,7 +9,7 @@ import sys
 
 import pytest
 
-from splurge_exceptions import SplurgeError, SplurgeSubclassError, SplurgeValueError
+from splurge_exceptions import SplurgeError, SplurgeSubclassError, SplurgeValueError, __version__
 from splurge_exceptions.formatting.message import ErrorMessageFormatter
 
 
@@ -25,7 +25,7 @@ class TestModuleEntryPoint:
             text=True,
         )
         assert result.returncode == 0
-        assert "2025.1.0" in result.stdout
+        assert __version__ in result.stdout
 
     def test_main_function_exit_code_propagated(self):
         """Test that main() exit codes are properly propagated in __main__."""
@@ -157,9 +157,7 @@ class TestContextManagement:
         """Test that context methods support chaining."""
         error = SplurgeValueError("Error", error_code="test")
 
-        result = error.attach_context(key="a", value=1).attach_context(
-            context_dict={"b": 2}
-        ).clear_context()
+        result = error.attach_context(key="a", value=1).attach_context(context_dict={"b": 2}).clear_context()
 
         assert result is error
         assert error.get_all_context() == {}
