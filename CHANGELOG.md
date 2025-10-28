@@ -5,6 +5,18 @@ All notable changes to Splurge Exceptions will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Calendar Versioning](https://calver.org/).
 
+## [2025.2.1] - 2025-10-28
+
+### Fixed
+- Improved error handling in `examples/api_client_usage.py`:
+  - Now catches `SplurgeError` specifically to format and display error details.
+  - Added a generic exception handler to catch unexpected errors and display their type and message.
+
+### Updated
+- Package version updated to `2025.2.1` in `splurge_exceptions/__init__.py`.
+- Bumped version to `2025.2.1` in `pyproject.toml` for patch release.
+- Updated all package imports to use relative imports where applicable.
+
 ## [2025.2.0] - 2025-10-27
 
 ### Updated
