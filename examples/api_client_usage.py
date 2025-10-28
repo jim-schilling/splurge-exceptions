@@ -16,6 +16,7 @@ from typing import Any
 # Simulate a database client library that uses splurge-exceptions internally
 from splurge_exceptions import (
     ErrorMessageFormatter,
+    SplurgeError,
     SplurgeOSError,
     SplurgeRuntimeError,
     SplurgeValueError,
@@ -244,7 +245,9 @@ class UserService:
         except (SplurgeOSError, SplurgeRuntimeError, SplurgeValueError) as e:
             # Attach context and re-raise
             e.attach_context("operation", "create_user")
-            e.attach_context("user_email", user_data.get("email"))
+            # Only attach email if user_data is a dict
+            if isinstance(user_data, dict):
+                e.attach_context("user_email", user_data.get("email"))
             raise
 
 
@@ -311,9 +314,11 @@ def demonstrate_validation_and_error_formatting():
         try:
             user_id = service.create_user_with_validation(user_data)
             print(f"  + Created user with ID: {user_id}")
-        except Exception as e:
+        except SplurgeError as e:
             formatted_error = formatter.format_error(e, include_context=True, include_suggestions=True)
             print(f"  - Error:\n{formatted_error}")
+        except Exception as e:
+            print(f"  - Unexpected error: {type(e).__name__}: {e}")
 
 
 def demonstrate_error_context_and_callbacks():
