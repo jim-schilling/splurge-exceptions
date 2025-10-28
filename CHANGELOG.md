@@ -5,6 +5,10 @@ All notable changes to Splurge Exceptions will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Calendar Versioning](https://calver.org/).
 
+## [2025.2.2] - 2025-10-28
+### Fixed
+- Refactored import statement in cli.py from absolute to relative import to ensure compatibility when package is embedded in other projects.
+
 ## [2025.2.1] - 2025-10-28
 
 ### Fixed
