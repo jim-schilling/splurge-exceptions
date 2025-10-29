@@ -5,7 +5,19 @@ All notable changes to Splurge Exceptions will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Calendar Versioning](https://calver.org/).
 
+## [2025.3.0] - 2025-10-29
+
+### Fixed
+- Corrected the return type annotation of the `message` property in `SplurgeError` from `str | None` to `str` to accurately reflect that it always returns a string.
+
+### Updated
+- Package version updated to `2025.3.0` in `splurge_exceptions/__init__.py` and `pyproject.toml`
+- Documentation for error code normalization improved.
+- Added examples of normalization in the `error_code` property docstring in `SplurgeError`.
+- Updated all relevant documentation files to reflect these changes.
+
 ## [2025.2.2] - 2025-10-28
+
 ### Fixed
 - Refactored import statement in cli.py from absolute to relative import to ensure compatibility when package is embedded in other projects.
 
