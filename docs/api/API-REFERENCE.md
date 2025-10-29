@@ -34,9 +34,10 @@ class SplurgeError(Exception):
             message: Human-readable error message (required)
             error_code: User-defined semantic error identifier (optional)
                        (e.g., "invalid-value", "timeout", "file-not-found")
-                       If provided, must match pattern: [a-z][a-z0-9-]*[a-z0-9]
-                       NO dots allowed in error codes.
-                       Invalid codes are normalized automatically (no validation error).
+                       Will be automatically normalized: uppercase → lowercase,
+                       spaces/underscores/symbols → dashes, duplicate dashes removed,
+                       leading/trailing dashes stripped. NO dots allowed in error codes.
+                       No validation error is raised; invalid input is normalized instead.
             details: Additional error details/context dictionary
         
         Example:
@@ -87,7 +88,7 @@ class SplurgeError(Exception):
         ...
     
     @property
-    def message(self) -> str | None:
+    def message(self) -> str:
         """Get the error message."""
         ...
     
@@ -434,23 +435,37 @@ Each domain component must match: `[a-z][a-z0-9-]*[a-z0-9]`
 
 ### User-Supplied Error Codes
 
-User-supplied error codes (the semantic part) **CANNOT contain dots**. They must match:
+User-supplied error codes (the semantic part) **CANNOT contain dots**. They are automatically normalized using the following transformations:
 
+**Normalization Process:**
+- Uppercase letters → lowercase (e.g., `INVALID-VALUE` → `invalid-value`)
+- Underscores, spaces, symbols → dashes (e.g., `invalid_value` → `invalid-value`, `invalid value` → `invalid-value`)
+- Duplicate dashes → single dash (e.g., `invalid--value` → `invalid-value`)
+- Leading/trailing dashes removed (e.g., `-invalid-value-` → `invalid-value`)
+- Dots are converted to dashes (e.g., `invalid.value` → `invalid-value`)
+
+**Examples:**
+```python
+# These all normalize to the same error code:
+error1 = SplurgeError("msg", error_code="invalid-value")
+error2 = SplurgeError("msg", error_code="INVALID-VALUE")  # → invalid-value
+error3 = SplurgeError("msg", error_code="invalid_value")  # → invalid-value
+error4 = SplurgeError("msg", error_code="invalid.value")  # → invalid-value
+error5 = SplurgeError("msg", error_code="INVALID_VALUE")  # → invalid-value
+
+# All result in full_code: "splurge.value.invalid-value"
+assert error1.error_code == error2.error_code == error3.error_code
 ```
-[a-z][a-z0-9-]*[a-z0-9]
-```
 
-**Valid error codes:**
-- `invalid-value`
-- `file-not-found`
-- `timeout`
-- `user-not-found`
+**Empty/Invalid Input:**
+- Empty string: normalized to `None` (error_code becomes None)
+- `None`: remains `None`
+- All-symbols string (e.g., `"---"` or `"___"`): normalized to `None`
 
-**Invalid error codes (rejected at runtime):**
-- `invalid.value` (contains dot)
-- `INVALID-VALUE` (uppercase not allowed)
-- `invalid_value` (underscore not allowed)
-- `invalid--value` (double hyphen not allowed)
+**Final Result After Normalization:**
+The normalized error code will match the pattern: `[a-z][a-z0-9-]*[a-z0-9]` (or be `None`)
+
+No validation error is raised; invalid input is always automatically normalized instead.
 
 ### Creating Custom Exception Classes
 
