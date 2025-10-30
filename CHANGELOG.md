@@ -5,6 +5,19 @@ All notable changes to Splurge Exceptions will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Calendar Versioning](https://calver.org/).
 
+## [2025.3.1] - 2025-10-30
+
+### Updated
+- Package version updated to `2025.3.1` in `splurge_exceptions/__init__.py` and `pyproject.toml`
+- Update mypy configuration in `pyproject.toml`.
+- Update pre-commit mypy run cli option.
+- Update ci-lint-and-typecheck.yml mypy run cli option.
+
+### Added
+- Added type ignore comment to `__reduce__` method in `SplurgeError` to suppress mypy untyped definition warning.
+- Added `__init__.py` to `examples/` directory for mypy compatibility.
+- Added `__init__.py` modules to `tests/*` directories for mypy compatibility.
+
 ## [2025.3.0] - 2025-10-29
 
 ### Fixed
